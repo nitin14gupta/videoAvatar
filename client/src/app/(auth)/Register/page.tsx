@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast } from "@/src/context/ToastContext";
 import EmailVerification from "@/src/component/EmailVerification";
+import CustomCursor from "@/src/component/CustomCursor";
 
 export default function RegisterPage() {
     const { register } = useAuth();
@@ -70,6 +71,7 @@ export default function RegisterPage() {
 
     return (
         <div className="min-h-screen bg-[#101621] flex items-center justify-center p-4 relative overflow-hidden">
+            <CustomCursor />
             {/* Animated Background Particles */}
             <div className="absolute inset-0 overflow-hidden">
                 {[...Array(15)].map((_, i) => {

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/src/context/AuthContext";
 import { useToast } from "@/src/context/ToastContext";
 import { apiService } from "@/src/api/apiService";
+import CustomCursor from "./CustomCursor";
 
 interface EmailVerificationProps {
     email: string;
@@ -70,6 +71,7 @@ export default function EmailVerification({ email, onVerified, onBack }: EmailVe
 
     return (
         <div className="min-h-screen bg-[#101621] flex items-center justify-center p-4 relative overflow-hidden">
+            <CustomCursor />
             {/* Animated Background Particles */}
             <div className="absolute inset-0 overflow-hidden">
                 {[...Array(15)].map((_, i) => {

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { apiService } from "@/src/api/apiService";
 import { useToast } from "@/src/context/ToastContext";
+import CustomCursor from "@/src/component/CustomCursor";
 
 export default function ForgotPasswordPage() {
     const [step, setStep] = useState(1);
@@ -82,6 +83,7 @@ export default function ForgotPasswordPage() {
 
     return (
         <div className="min-h-screen bg-[#101621] flex items-center justify-center p-4 relative overflow-hidden">
+            <CustomCursor />
             {/* Animated Background Particles */}
             <div className="absolute inset-0 overflow-hidden">
                 {[...Array(15)].map((_, i) => {

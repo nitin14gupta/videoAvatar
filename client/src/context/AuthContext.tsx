@@ -28,11 +28,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [token, setToken] = useState<string | null>(null);
     const isAuthenticated = !!token;
 
-    // Restore session
+    const clearSession = useCallback(() => {
+        setToken(null);
+        setUser(null);
+        try {
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+                localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+            }
+        } catch { }
+    }, []);
+
+    // Restore session - set token immediately, fetch user data async
     useEffect(() => {
         try {
-            const t = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) : null;
-            if (t) setToken(t);
+            if (typeof window !== 'undefined') {
+                const t = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+                const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+
+                if (t) {
+                    // Set token immediately so route guard works
+                    setToken(t);
+
+                    // Restore user data if available
+                    if (userData) {
+                        try {
+                            const parsedUser = JSON.parse(userData);
+                            setUser(parsedUser);
+                        } catch {
+                            // If user data is invalid, fetch from API (non-blocking)
+                            apiService.getCurrentUser().then((user) => {
+                                setUser(user);
+                                localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+                            }).catch(() => {
+                                // If fetch fails, don't clear session - just log error
+                                console.error('Failed to fetch user data');
+                            });
+                        }
+                    } else {
+                        // Token exists but no user data, fetch it (non-blocking)
+                        apiService.getCurrentUser().then((user) => {
+                            setUser(user);
+                            localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+                        }).catch(() => {
+                            // If fetch fails, don't clear session - token might still be valid
+                            console.error('Failed to fetch user data');
+                        });
+                    }
+                }
+            }
         } catch { }
     }, []);
 
@@ -40,34 +84,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         const authRoutes = ['/Login', '/Register', '/ForgotPassword'];
         const isAuthRoute = authRoutes.includes(pathname || '');
-        if (isAuthenticated && isAuthRoute) {
-            router.replace('/Dashboard');
-        } else if (!isAuthenticated && !isAuthRoute) {
-            // Allow landing page
-            if (pathname !== '/' && !pathname?.startsWith('/Dashboard')) return;
-            if (pathname?.startsWith('/Dashboard')) router.replace('/Login');
+
+        if (isAuthenticated) {
+            // If authenticated and on auth routes, redirect to dashboard
+            if (isAuthRoute) {
+                router.replace('/Dashboard');
+            }
+            // If authenticated and on landing page, redirect to dashboard
+            else if (pathname === '/') {
+                router.replace('/Dashboard');
+            }
+        } else if (!isAuthenticated) {
+            // If not authenticated and trying to access dashboard, redirect to login
+            if (pathname?.startsWith('/Dashboard')) {
+                router.replace('/Login');
+            }
+            // Allow landing page and auth routes when not authenticated
         }
     }, [isAuthenticated, pathname, router]);
 
-    const persistToken = useCallback((t: string) => {
+    const persistToken = useCallback((t: string, userData?: AuthUser) => {
         setToken(t);
         try {
-            if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, t);
-        } catch { }
-    }, []);
-
-    const clearSession = useCallback(() => {
-        setToken(null);
-        setUser(null);
-        try {
-            if (typeof window !== 'undefined') localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, t);
+                if (userData) {
+                    localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+                }
+            }
         } catch { }
     }, []);
 
     const login = useCallback(async (email: string, password: string) => {
         try {
             const res = await apiService.login(email, password);
-            persistToken(res.token);
+            persistToken(res.token, res.user);
             setUser(res.user);
             showSuccess('Logged in', `Welcome back${res.user?.name ? ', ' + res.user.name : ''}!`);
             router.replace('/Dashboard');
@@ -96,9 +147,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const verifyEmail = useCallback(async (email: string, code: string) => {
         try {
             const res = await apiService.verifyEmail(email, code);
-            persistToken(res.token);
+            persistToken(res.token, res.user);
             setUser(res.user);
-            showSuccess('Email Verified', 'Welcome to eduCreate!');
+            showSuccess('Email Verified', `Welcome to VideoAvatar${res.user?.name ? ', ' + res.user.name : ''}!`);
             router.replace('/Dashboard');
         } catch (e: any) {
             showError('Verification Failed', e?.message || 'Invalid or expired code');

@@ -1,9 +1,9 @@
 import os
 import time
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends, Header
 from pydantic import BaseModel, EmailStr
 from email_validator import validate_email, EmailNotValidError
-from utils.auth_utils import hash_password, verify_password, create_jwt, generate_reset_code
+from utils.auth_utils import hash_password, verify_password, create_jwt, decode_jwt, generate_reset_code
 from utils.email_service import email_service
 from db.config import get_supabase_client
 
@@ -144,7 +144,7 @@ async def login(request: LoginRequest):
             detail="Invalid credentials"
         )
 
-    token = create_jwt({"sub": user.get("id") or user.get("email"), "email": user.get("email")})
+    token = create_jwt({"sub": user.get("id") or user.get("email"), "email": user.get("email"), "name": user.get("name")})
 
     # Optional: login notification (best-effort)
     try:
@@ -311,8 +311,55 @@ async def verify_email(request: VerifyEmailRequest):
         pass
 
     user = created.data[0]
-    token = create_jwt({"sub": user.get("id") or user.get("email"), "email": email})
+    token = create_jwt({"sub": user.get("id") or user.get("email"), "email": email, "name": rec.get("name")})
     return {"token": token, "user": {"id": user.get("id"), "name": rec.get("name"), "email": email}}
+
+
+def get_current_user(authorization: str = Header(None)):
+    """Extract and validate user from JWT token"""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authorization header"
+        )
+    
+    token = authorization.replace("Bearer ", "")
+    decoded = decode_jwt(token)
+    
+    if not decoded:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+    
+    email = decoded.get("email")
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload"
+        )
+    
+    # Fetch user from database
+    users = _get_users_table()
+    res = users.select("id,name,email").eq("email", email).limit(1).execute()
+    
+    if not res.data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+    
+    return res.data[0]
+
+
+@auth_router.get("/me")
+async def get_me(current_user: dict = Depends(get_current_user)):
+    """Get current authenticated user"""
+    return {
+        "id": current_user.get("id"),
+        "name": current_user.get("name"),
+        "email": current_user.get("email")
+    }
 
 
 @auth_router.post("/verify/resend")

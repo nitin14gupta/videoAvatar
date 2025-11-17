@@ -93,6 +93,10 @@ class ApiService {
         });
     }
 
+    getCurrentUser() {
+        return this.request<AuthResponse['user']>(API_CONFIG.ENDPOINTS.AUTH.ME);
+    }
+
     private async uploadRequest<T>(path: string, formData: FormData): Promise<T> {
         const headers: Record<string, string> = {};
         const token = this.getAuthToken();

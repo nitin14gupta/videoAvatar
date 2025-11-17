@@ -13,6 +13,7 @@ export const API_CONFIG = {
             RESET_CONFIRM: '/auth/reset/confirm',
             VERIFY_EMAIL: '/auth/verify/email',
             RESEND_VERIFICATION: '/auth/verify/resend',
+            ME: '/auth/me',
         },
         HEALTH: '/health',
     },
@@ -26,6 +27,7 @@ export const API_CONFIG = {
 // Storage keys
 export const STORAGE_KEYS = {
     AUTH_TOKEN: 'ailipsync_auth_token',
+    USER_DATA: 'ailipsync_user_data',
 };
 
 // API Response types

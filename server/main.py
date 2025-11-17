@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from routes.auth_routes import auth_router
+from routes.avatar_routes import avatar_router
 
 # Configure logging
 logging.basicConfig(
@@ -42,6 +43,7 @@ def create_app() -> FastAPI:
 
     # Register routers
     app.include_router(auth_router, prefix="/auth", tags=["auth"])
+    app.include_router(avatar_router, prefix="/avatars", tags=["avatars"])
     
     # Log app startup
     logger.info("Application started successfully")

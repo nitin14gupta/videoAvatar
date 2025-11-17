@@ -6,10 +6,12 @@ import Image from "next/image";
 
 interface AvatarCardProps {
     avatar: {
-        id: number;
+        id: string;
         name: string;
-        role: string;
-        thumbnail: string;
+        role_title: string;
+        image_url: string;
+        description?: string;
+        specialty?: string;
     };
 }
 
@@ -42,7 +44,7 @@ export default function AvatarCard({ avatar }: AvatarCardProps) {
             {/* Avatar Thumbnail */}
             <div className="relative w-full aspect-square mb-3 rounded-lg overflow-hidden">
                 <Image
-                    src={avatar.thumbnail}
+                    src={avatar.image_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop"}
                     alt={avatar.name}
                     fill
                     className="object-cover"
@@ -55,7 +57,7 @@ export default function AvatarCard({ avatar }: AvatarCardProps) {
                     {avatar.name}
                 </h3>
                 <p className="text-[#c3d3e2] text-xs" style={{ fontFamily: 'var(--font-inter)' }}>
-                    {avatar.role}
+                    {avatar.role_title}
                 </p>
             </div>
 

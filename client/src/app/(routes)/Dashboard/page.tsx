@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/src/context/AuthContext";
+import { apiService } from "@/src/api/apiService";
+import { Avatar } from "@/src/api/config";
 import CustomCursor from "@/src/component/CustomCursor";
 import AvatarCard from "@/src/component/AvatarCard";
 import ConversationCard from "@/src/component/ConversationCard";
@@ -11,22 +13,36 @@ export default function DashboardPage() {
     const { user, logout } = useAuth();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [darkMode, setDarkMode] = useState(true);
+    const [defaultAvatars, setDefaultAvatars] = useState<Avatar[]>([]);
+    const [userAvatars, setUserAvatars] = useState<Avatar[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // Sample data - replace with actual API calls
-    const defaultAvatars = [
-        { id: 1, name: "Doctor", role: "Medical Professional", thumbnail: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop" },
-        { id: 2, name: "Salesman", role: "Sales Representative", thumbnail: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop" },
-        { id: 3, name: "Teacher", role: "Educator", thumbnail: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop" },
-        { id: 4, name: "Consultant", role: "Business Advisor", thumbnail: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop" },
-    ];
+    // Fetch avatars from API
+    useEffect(() => {
+        const fetchAvatars = async () => {
+            try {
+                setLoading(true);
+                const [defaultRes, myAvatarsRes] = await Promise.all([
+                    apiService.getDefaultAvatars(),
+                    apiService.getMyAvatars().catch(() => ({ avatars: [] })) // Handle if not authenticated
+                ]);
 
-    const userAvatars = [
-        { id: 5, name: user?.name || "Custom Avatar", role: "Personal", thumbnail: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop" },
-    ];
+                setDefaultAvatars(defaultRes.avatars || []);
+                setUserAvatars(myAvatarsRes.avatars || []);
+            } catch (error) {
+                console.error('Failed to fetch avatars:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
+        fetchAvatars();
+    }, []);
+
+    // Sample conversations (will be replaced with API later)
     const recentConversations = [
-        { id: 1, avatarName: "Doctor", avatarThumbnail: defaultAvatars[0].thumbnail, lastMessage: "Good morning, how can I help you today?", timestamp: "2 hours ago" },
-        { id: 2, avatarName: "Salesman", avatarThumbnail: defaultAvatars[1].thumbnail, lastMessage: "Hello! Want to know about our latest products?", timestamp: "1 day ago" },
+        { id: 1, avatarName: defaultAvatars[0]?.name || "Doctor", avatarThumbnail: defaultAvatars[0]?.image_url || "", lastMessage: "Good morning, how can I help you today?", timestamp: "2 hours ago" },
+        { id: 2, avatarName: defaultAvatars[1]?.name || "Salesman", avatarThumbnail: defaultAvatars[1]?.image_url || "", lastMessage: "Hello! Want to know about our latest products?", timestamp: "1 day ago" },
     ];
 
     return (
@@ -50,25 +66,31 @@ export default function DashboardPage() {
                 <WelcomeBanner userName={user?.name || "User"} />
 
                 {/* Avatars Section */}
-                <div className="grid md:grid-cols-2 gap-6 mb-8">
-                    {/* Default Avatars */}
-                    <AvatarsSection
-                        title="Default Avatars"
-                        avatars={defaultAvatars}
-                        emptyMessage="No default avatars available"
-                    />
+                {loading ? (
+                    <div className="text-center py-12">
+                        <p className="text-[#c3d3e2]" style={{ fontFamily: 'var(--font-inter)' }}>Loading avatars...</p>
+                    </div>
+                ) : (
+                    <div className="grid md:grid-cols-2 gap-6 mb-8">
+                        {/* Default Avatars */}
+                        <AvatarsSection
+                            title="Default Avatars"
+                            avatars={defaultAvatars}
+                            emptyMessage="No default avatars available"
+                        />
 
-                    {/* Your Avatars */}
-                    <AvatarsSection
-                        title="Your Avatars"
-                        avatars={userAvatars}
-                        emptyMessage="No avatars yet, upload to get started!"
-                        showCreateButton={true}
-                    />
-                </div>
+                        {/* Your Avatars */}
+                        <AvatarsSection
+                            title="Your Avatars"
+                            avatars={userAvatars}
+                            emptyMessage="No avatars yet, upload to get started!"
+                            showCreateButton={true}
+                        />
+                    </div>
+                )}
 
                 {/* Recent Conversations */}
-                <RecentConversationsSection conversations={recentConversations} />
+                {/* <RecentConversationsSection conversations={recentConversations} /> */}
             </main>
 
             {/* Floating Create Button */}
@@ -231,7 +253,7 @@ function AvatarsSection({
     showCreateButton = false
 }: {
     title: string;
-    avatars: any[];
+    avatars: Avatar[];
     emptyMessage: string;
     showCreateButton?: boolean;
 }) {
@@ -271,34 +293,34 @@ function AvatarsSection({
 }
 
 // Recent Conversations Section
-function RecentConversationsSection({ conversations }: { conversations: any[] }) {
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-[#171c2b] border border-[#4e99ff]/10 rounded-2xl p-6"
-        >
-            <h2 className="text-xl font-bold text-white mb-4" style={{ fontFamily: 'var(--font-inter)' }}>
-                Recent Conversations
-            </h2>
+// function RecentConversationsSection({ conversations }: { conversations: any[] }) {
+//     return (
+//         <motion.div
+//             initial={{ opacity: 0, y: 20 }}
+//             animate={{ opacity: 1, y: 0 }}
+//             transition={{ delay: 0.3 }}
+//             className="bg-[#171c2b] border border-[#4e99ff]/10 rounded-2xl p-6"
+//         >
+//             <h2 className="text-xl font-bold text-white mb-4" style={{ fontFamily: 'var(--font-inter)' }}>
+//                 Recent Conversations
+//             </h2>
 
-            {conversations.length === 0 ? (
-                <div className="text-center py-12">
-                    <p className="text-[#c3d3e2]" style={{ fontFamily: 'var(--font-inter)' }}>
-                        No conversations yet. Start chatting with an avatar!
-                    </p>
-                </div>
-            ) : (
-                <div className="space-y-3">
-                    {conversations.map((conversation) => (
-                        <ConversationCard key={conversation.id} conversation={conversation} />
-                    ))}
-                </div>
-            )}
-        </motion.div>
-    );
-}
+//             {conversations.length === 0 ? (
+//                 <div className="text-center py-12">
+//                     <p className="text-[#c3d3e2]" style={{ fontFamily: 'var(--font-inter)' }}>
+//                         No conversations yet. Start chatting with an avatar!
+//                     </p>
+//                 </div>
+//             ) : (
+//                 <div className="space-y-3">
+//                     {conversations.map((conversation) => (
+//                         <ConversationCard key={conversation.id} conversation={conversation} />
+//                     ))}
+//                 </div>
+//             )}
+//         </motion.div>
+//     );
+// }
 
 // Floating Create Button
 function FloatingCreateButton() {

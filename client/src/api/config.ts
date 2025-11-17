@@ -15,6 +15,16 @@ export const API_CONFIG = {
             RESEND_VERIFICATION: '/auth/verify/resend',
             ME: '/auth/me',
         },
+        AVATARS: {
+            DEFAULT: '/avatars/default',
+            MY_AVATARS: '/avatars/my-avatars',
+            GET_BY_ID: (id: string) => `/avatars/${id}`,
+            CREATE: '/avatars/create',
+            UPDATE: (id: string) => `/avatars/${id}`,
+            DELETE: (id: string) => `/avatars/${id}`,
+            UPLOAD_IMAGE: '/avatars/upload-image',
+            UPLOAD_AUDIO: '/avatars/upload-audio',
+        },
         HEALTH: '/health',
     },
 
@@ -45,5 +55,37 @@ export interface AuthResponse {
         email: string;
         name?: string;
     };
+}
+
+// Avatar types
+export interface Avatar {
+    id: string;
+    name: string;
+    role_title: string;
+    description?: string;
+    image_url: string;
+    audio_url?: string;
+    language: string;
+    specialty?: string;
+    personality?: string;
+    template_prompt?: string;
+    theme_color?: string;
+    active: boolean;
+    created_by: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AvatarCreateRequest {
+    name: string;
+    role_title: string;
+    description?: string;
+    image_url?: string;
+    audio_url?: string;
+    language?: string;
+    specialty?: string;
+    personality?: string;
+    template_prompt?: string;
+    theme_color?: string;
 }
 

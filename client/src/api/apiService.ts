@@ -1,4 +1,4 @@
-import { API_CONFIG, STORAGE_KEYS, AuthResponse } from './config';
+import { API_CONFIG, STORAGE_KEYS, AuthResponse, Avatar, AvatarCreateRequest } from './config';
 
 class ApiService {
     private baseURL: string;
@@ -95,6 +95,57 @@ class ApiService {
 
     getCurrentUser() {
         return this.request<AuthResponse['user']>(API_CONFIG.ENDPOINTS.AUTH.ME);
+    }
+
+    // Avatar endpoints
+    getDefaultAvatars() {
+        return this.request<{ avatars: Avatar[] }>(API_CONFIG.ENDPOINTS.AVATARS.DEFAULT);
+    }
+
+    getMyAvatars() {
+        return this.request<{ avatars: Avatar[] }>(API_CONFIG.ENDPOINTS.AVATARS.MY_AVATARS);
+    }
+
+    getAvatarById(id: string) {
+        return this.request<{ avatar: Avatar }>(API_CONFIG.ENDPOINTS.AVATARS.GET_BY_ID(id));
+    }
+
+    createAvatar(data: AvatarCreateRequest) {
+        return this.request<{ avatar: Avatar }>(API_CONFIG.ENDPOINTS.AVATARS.CREATE, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    updateAvatar(id: string, data: Partial<AvatarCreateRequest>) {
+        return this.request<{ avatar: Avatar }>(API_CONFIG.ENDPOINTS.AVATARS.UPDATE(id), {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    }
+
+    deleteAvatar(id: string) {
+        return this.request<{ ok: boolean; message: string }>(API_CONFIG.ENDPOINTS.AVATARS.DELETE(id), {
+            method: 'DELETE',
+        });
+    }
+
+    uploadAvatarImage(file: File) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this.uploadRequest<{ url: string; filename: string; path: string }>(
+            API_CONFIG.ENDPOINTS.AVATARS.UPLOAD_IMAGE,
+            formData
+        );
+    }
+
+    uploadAvatarAudio(file: File) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this.uploadRequest<{ url: string; filename: string; path: string }>(
+            API_CONFIG.ENDPOINTS.AVATARS.UPLOAD_AUDIO,
+            formData
+        );
     }
 
     private async uploadRequest<T>(path: string, formData: FormData): Promise<T> {

@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/context/ToastContext";
-import EmailVerification from "@/components/EmailVerification";
+import { motion } from "framer-motion";
+import { useAuth } from "@/src/context/AuthContext";
+import { useToast } from "@/src/context/ToastContext";
+import EmailVerification from "@/src/component/EmailVerification";
 
 export default function RegisterPage() {
     const { register } = useAuth();
@@ -68,41 +69,107 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center p-4">
-            {/* Background Pattern */}
+        <div className="min-h-screen bg-[#101621] flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Animated Background Particles */}
             <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-[#7FC4C9]/20 to-[#4CB1B9]/20 rounded-full blur-3xl"></div>
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-[#4CB1B9]/20 to-[#7FC4C9]/20 rounded-full blur-3xl"></div>
+                {[...Array(15)].map((_, i) => {
+                    const width = typeof window !== 'undefined' ? window.innerWidth : 1920;
+                    const height = typeof window !== 'undefined' ? window.innerHeight : 1080;
+                    return (
+                        <motion.div
+                            key={i}
+                            className="absolute w-1 h-1 rounded-full bg-[#abe6ff]"
+                            initial={{
+                                x: Math.random() * width,
+                                y: Math.random() * height,
+                                opacity: 0,
+                            }}
+                            animate={{
+                                y: [null, Math.random() * height],
+                                x: [null, Math.random() * width],
+                                opacity: [0, 0.8, 0],
+                            }}
+                            transition={{
+                                duration: 5 + Math.random() * 5,
+                                repeat: Infinity,
+                                delay: Math.random() * 2,
+                            }}
+                        />
+                    );
+                })}
             </div>
 
-            <div className="relative w-full max-w-md">
+            {/* Neural Wave Glow Effect */}
+            <motion.div
+                className="absolute inset-0 flex items-center justify-center"
+                animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [0.2, 0.4, 0.2],
+                }}
+                transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                }}
+            >
+                <div className="w-[600px] h-[600px] rounded-full bg-gradient-to-r from-[#4e99ff]/10 to-[#be65ff]/10 blur-3xl" />
+            </motion.div>
+
+            <div className="relative w-full max-w-md z-10">
                 {/* Main Card */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }}
+                    className="glass-card rounded-3xl shadow-2xl p-8"
+                >
                     {/* Logo and Header */}
                     <div className="text-center mb-8">
-                        <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-gradient-to-br from-[#7FC4C9] via-[#4CB1B9] to-[#7FC4C9] flex items-center justify-center shadow-lg">
+                        <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: 0.2, type: "spring" }}
+                            className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-gradient-to-br from-[#4e99ff] via-[#be65ff] to-[#0fffc3] flex items-center justify-center glow-azure"
+                        >
                             <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                             </svg>
-                        </div>
-                        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                        </motion.div>
+                        <motion.h1
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-4xl font-bold gradient-text mb-2"
+                            style={{ fontFamily: 'var(--font-orbitron)' }}
+                        >
                             Create your account
-                        </h1>
-                        <p className="mt-2 text-gray-600 text-sm">
-                            Join thousands of educators creating amazing content
-                        </p>
+                        </motion.h1>
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                            className="mt-2 text-[#c3d3e2] text-sm"
+                            style={{ fontFamily: 'var(--font-inter)' }}
+                        >
+                            Join thousands creating amazing AI avatars
+                        </motion.p>
                     </div>
 
                     {/* Form */}
                     <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-5">
                         {/* Name Field */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-700 block">
+                        <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.5 }}
+                            className="space-y-2"
+                        >
+                            <label className="text-sm font-semibold text-[#c3d3e2] block" style={{ fontFamily: 'var(--font-inter)' }}>
                                 Full Name
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className="h-5 w-5 text-[#4e99ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                     </svg>
                                 </div>
@@ -110,21 +177,26 @@ export default function RegisterPage() {
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#7FC4C9] focus:border-transparent transition-all duration-200 bg-gray-50/50 focus:bg-white placeholder:text-gray-400 text-gray-700"
+                                    className="w-full pl-10 pr-4 py-3 border border-[#4e99ff]/30 rounded-xl focus:ring-2 focus:ring-[#4e99ff] focus:border-[#4e99ff] transition-all duration-200 bg-[#101621]/50 backdrop-blur-sm text-white placeholder:text-[#c3d3e2]/50 focus:bg-[#101621]"
                                     placeholder="Enter your full name"
                                     required
                                 />
                             </div>
-                        </div>
+                        </motion.div>
 
                         {/* Email Field */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-700 block">
+                        <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.6 }}
+                            className="space-y-2"
+                        >
+                            <label className="text-sm font-semibold text-[#c3d3e2] block" style={{ fontFamily: 'var(--font-inter)' }}>
                                 Email Address
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className="h-5 w-5 text-[#4e99ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                                     </svg>
                                 </div>
@@ -132,21 +204,26 @@ export default function RegisterPage() {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#7FC4C9] focus:border-transparent transition-all duration-200 bg-gray-50/50 focus:bg-white placeholder:text-gray-400 text-gray-700"
+                                    className="w-full pl-10 pr-4 py-3 border border-[#4e99ff]/30 rounded-xl focus:ring-2 focus:ring-[#4e99ff] focus:border-[#4e99ff] transition-all duration-200 bg-[#101621]/50 backdrop-blur-sm text-white placeholder:text-[#c3d3e2]/50 focus:bg-[#101621]"
                                     placeholder="Enter your email"
                                     required
                                 />
                             </div>
-                        </div>
+                        </motion.div>
 
                         {/* Password Field */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-700 block">
+                        <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.7 }}
+                            className="space-y-2"
+                        >
+                            <label className="text-sm font-semibold text-[#c3d3e2] block" style={{ fontFamily: 'var(--font-inter)' }}>
                                 Password
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className="h-5 w-5 text-[#4e99ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                     </svg>
                                 </div>
@@ -154,13 +231,13 @@ export default function RegisterPage() {
                                     type={show1 ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#7FC4C9] focus:border-transparent transition-all duration-200 bg-gray-50/50 focus:bg-white placeholder:text-gray-400 text-gray-700"
+                                    className="w-full pl-10 pr-12 py-3 border border-[#4e99ff]/30 rounded-xl focus:ring-2 focus:ring-[#4e99ff] focus:border-[#4e99ff] transition-all duration-200 bg-[#101621]/50 backdrop-blur-sm text-white placeholder:text-[#c3d3e2]/50 focus:bg-[#101621]"
                                     placeholder="Create a password"
                                     required
                                 />
                                 <button
                                     type="button"
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#4e99ff] hover:text-[#0fffc3] transition-colors"
                                     onClick={() => setShow1(!show1)}
                                 >
                                     {show1 ? (
@@ -175,16 +252,21 @@ export default function RegisterPage() {
                                     )}
                                 </button>
                             </div>
-                        </div>
+                        </motion.div>
 
                         {/* Confirm Password Field */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-700 block">
+                        <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.8 }}
+                            className="space-y-2"
+                        >
+                            <label className="text-sm font-semibold text-[#c3d3e2] block" style={{ fontFamily: 'var(--font-inter)' }}>
                                 Confirm Password
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className="h-5 w-5 text-[#4e99ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
@@ -192,13 +274,13 @@ export default function RegisterPage() {
                                     type={show2 ? "text" : "password"}
                                     value={confirm}
                                     onChange={(e) => setConfirm(e.target.value)}
-                                    className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#7FC4C9] focus:border-transparent transition-all duration-200 bg-gray-50/50 focus:bg-white placeholder:text-gray-400 text-gray-700"
+                                    className="w-full pl-10 pr-12 py-3 border border-[#4e99ff]/30 rounded-xl focus:ring-2 focus:ring-[#4e99ff] focus:border-[#4e99ff] transition-all duration-200 bg-[#101621]/50 backdrop-blur-sm text-white placeholder:text-[#c3d3e2]/50 focus:bg-[#101621]"
                                     placeholder="Confirm your password"
                                     required
                                 />
                                 <button
                                     type="button"
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#4e99ff] hover:text-[#0fffc3] transition-colors"
                                     onClick={() => setShow2(!show2)}
                                 >
                                     {show2 ? (
@@ -213,11 +295,16 @@ export default function RegisterPage() {
                                     )}
                                 </button>
                             </div>
-                        </div>
+                        </motion.div>
 
                         {/* Terms and Conditions */}
-                        <div className="space-y-3">
-                            <label className="flex items-start gap-3 text-sm text-gray-700">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.9 }}
+                            className="space-y-3"
+                        >
+                            <label className="flex items-start gap-3 text-sm text-[#c3d3e2]" style={{ fontFamily: 'var(--font-inter)' }}>
                                 <div className="relative flex items-center">
                                     <input
                                         type="checkbox"
@@ -226,8 +313,8 @@ export default function RegisterPage() {
                                         className="sr-only"
                                     />
                                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${agree
-                                        ? 'bg-[#7FC4C9] border-[#7FC4C9]'
-                                        : 'border-gray-300 hover:border-[#7FC4C9]'
+                                        ? 'bg-[#4e99ff] border-[#4e99ff]'
+                                        : 'border-[#4e99ff]/50 hover:border-[#4e99ff]'
                                         }`}>
                                         {agree && (
                                             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -238,26 +325,32 @@ export default function RegisterPage() {
                                 </div>
                                 <span className="leading-relaxed">
                                     I have read and accept the{" "}
-                                    <Link href="/Privacy" className="text-[#4CB1B9] hover:text-[#7FC4C9] font-medium transition-colors cursor-pointer">
+                                    <Link href="/Privacy" className="text-[#4e99ff] hover:text-[#0fffc3] font-medium transition-colors">
                                         Privacy Policy
                                     </Link>
                                     {" "}and{" "}
-                                    <Link href="/Terms" className="text-[#4CB1B9] hover:text-[#7FC4C9] font-medium transition-colors cursor-pointer">
+                                    <Link href="/Terms" className="text-[#4e99ff] hover:text-[#0fffc3] font-medium transition-colors">
                                         Terms of Service
                                     </Link>
                                 </span>
                             </label>
-                        </div>
+                        </motion.div>
 
                         {/* Submit Button */}
-                        <button
+                        <motion.button
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 1 }}
                             type="submit"
                             disabled={!agree || loading}
-                            className="w-full bg-gradient-to-r from-[#7FC4C9] to-[#4CB1B9] text-white font-semibold py-3 px-4 rounded-xl hover:from-[#4CB1B9] hover:to-[#7FC4C9] focus:outline-none focus:ring-2 focus:ring-[#7FC4C9] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl cursor-pointer"
+                            className="w-full bg-gradient-to-r from-[#0fffc3] to-[#4e99ff] text-[#101621] font-bold py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0fffc3] focus:ring-offset-2 focus:ring-offset-[#101621] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 glow-mint"
+                            style={{ fontFamily: 'var(--font-inter)' }}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                         >
                             {loading ? (
                                 <div className="flex items-center justify-center">
-                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
@@ -266,71 +359,58 @@ export default function RegisterPage() {
                             ) : (
                                 "Create Account"
                             )}
-                        </button>
+                        </motion.button>
                     </form>
 
                     {/* Divider */}
-                    <div className="mt-8 mb-6">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1.1 }}
+                        className="mt-8 mb-6"
+                    >
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-200"></div>
+                                <div className="w-full border-t border-[#4e99ff]/20"></div>
                             </div>
                             <div className="relative flex justify-center text-sm">
-                                <span className="px-4 bg-white text-gray-500">or</span>
+                                <span className="px-4 bg-[#101621] text-[#c3d3e2]">or</span>
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
 
                     {/* Sign In Link */}
-                    <p className="text-center text-sm text-gray-600">
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1.2 }}
+                        className="text-center text-sm text-[#c3d3e2]"
+                        style={{ fontFamily: 'var(--font-inter)' }}
+                    >
                         Already have an account?{" "}
                         <Link
                             href="/Login"
-                            className="font-semibold text-[#4CB1B9] hover:text-[#7FC4C9] transition-colors cursor-pointer"
+                            className="font-semibold text-[#4e99ff] hover:text-[#0fffc3] transition-colors"
                         >
                             Sign in here
                         </Link>
-                    </p>
-                </div>
+                    </motion.p>
+                </motion.div>
 
                 {/* Footer */}
-                <div className="mt-8 text-center">
-                    <p className="text-xs text-gray-500">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1.3 }}
+                    className="mt-8 text-center"
+                >
+                    <p className="text-xs text-[#c3d3e2]/60" style={{ fontFamily: 'var(--font-inter)' }}>
                         By creating an account, you agree to our{" "}
-                        <Link href="/Terms" className="text-[#4CB1B9] hover:underline">Terms of Service</Link>
+                        <Link href="/Terms" className="text-[#4e99ff] hover:text-[#0fffc3] hover:underline">Terms of Service</Link>
                         {" "}and{" "}
-                        <Link href="/Privacy" className="text-[#4CB1B9] hover:underline">Privacy Policy</Link>
+                        <Link href="/Privacy" className="text-[#4e99ff] hover:text-[#0fffc3] hover:underline">Privacy Policy</Link>
                     </p>
-                </div>
-            </div>
-
-            {/* Registration Disabled Overlay */}
-            <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center">
-                <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 p-8 max-w-md mx-4 text-center">
-                    <div className="mb-6">
-                        <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-gradient-to-br from-gray-400 via-gray-300 to-gray-400 flex items-center justify-center shadow-lg">
-                            <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
-                        </div>
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                            Registration Temporarily Disabled
-                        </h2>
-                        <p className="text-gray-600">
-                            New users can't register right now.
-                        </p>
-                        <p className="text-gray-600 mt-2">
-                            Go and login if you already have an account.
-                        </p>
-                    </div>
-
-                    <Link
-                        href="/Login"
-                        className="inline-block w-full bg-gradient-to-r from-[#7FC4C9] to-[#4CB1B9] text-white font-semibold py-3 px-4 rounded-xl hover:from-[#4CB1B9] hover:to-[#7FC4C9] focus:outline-none focus:ring-2 focus:ring-[#7FC4C9] focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl"
-                    >
-                        Go to Login
-                    </Link>
-                </div>
+                </motion.div>
             </div>
         </div>
     );

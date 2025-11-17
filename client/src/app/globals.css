@@ -1,26 +1,171 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Futuristic Dreamscape Color Palette */
+  --bg-primary: #101621;
+  --accent-azure: #4e99ff;
+  --accent-violet: #be65ff;
+  --primary-mint: #0fffc3;
+  --secondary-magenta: #ff9aff;
+  --text-primary: #ffffff;
+  --text-secondary: #c3d3e2;
+  --cta-coral: #ef476f;
+  --glow-blue: #abe6ff;
+  --glow-purple: #d3caff;
+
+  --background: var(--bg-primary);
+  --foreground: var(--text-primary);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-orbitron);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-primary) !important;
+  color: var(--text-primary);
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Ensure font variables work properly */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-orbitron), sans-serif;
+}
+
+/* Font utility classes */
+.font-orbitron {
+  font-family: var(--font-orbitron), sans-serif !important;
+}
+
+.font-inter {
+  font-family: var(--font-inter), sans-serif !important;
+}
+
+/* Smooth scroll container */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent-azure), var(--accent-violet));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--primary-mint), var(--secondary-magenta));
+}
+
+/* Glow effects */
+.glow-azure {
+  box-shadow: 0 0 20px rgba(78, 153, 255, 0.5), 0 0 40px rgba(78, 153, 255, 0.3);
+}
+
+.glow-violet {
+  box-shadow: 0 0 20px rgba(190, 101, 255, 0.5), 0 0 40px rgba(190, 101, 255, 0.3);
+}
+
+.glow-mint {
+  box-shadow: 0 0 20px rgba(15, 255, 195, 0.5), 0 0 40px rgba(15, 255, 195, 0.3);
+}
+
+.glow-magenta {
+  box-shadow: 0 0 20px rgba(255, 154, 255, 0.5), 0 0 40px rgba(255, 154, 255, 0.3);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #4e99ff, #be65ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  color: transparent;
+}
+
+.gradient-text-mint {
+  background: linear-gradient(135deg, #0fffc3, #ff9aff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  color: transparent;
+}
+
+/* Glassmorphism */
+.glass-card {
+  background: rgba(16, 22, 33, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(78, 153, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Neural pulse animation */
+@keyframes neural-pulse {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.neural-pulse {
+  animation: neural-pulse 3s ease-in-out infinite;
+}
+
+/* Particle glow */
+@keyframes particle-float {
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: translateY(-20px) translateX(10px);
+    opacity: 1;
+  }
+}
+
+.particle-float {
+  animation: particle-float 4s ease-in-out infinite;
+}
+
+/* Hide scrollbar */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

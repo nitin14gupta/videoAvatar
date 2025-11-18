@@ -11,3 +11,11 @@ python-multipart
 requests
 langchain-openai
 langchain-core
+faster-whisper 
+websockets 
+soundfile 
+numpy 
+torch
+librosa 
+soundfile
+hf_xet

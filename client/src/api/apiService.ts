@@ -155,6 +155,25 @@ class ApiService {
         }).then(res => res.prompt);
     }
 
+    // Conversation endpoints
+    chatWithAvatar(avatarId: string, message: string, conversationId?: string) {
+        return this.request<{ conversation_id: string; message: string; avatar_response: string }>(
+            API_CONFIG.ENDPOINTS.CONVERSATIONS.CHAT,
+            {
+                method: 'POST',
+                body: JSON.stringify({ avatar_id: avatarId, message, conversation_id: conversationId }),
+            }
+        );
+    }
+
+    getConversations() {
+        return this.request<{ conversations: any[] }>(API_CONFIG.ENDPOINTS.CONVERSATIONS.GET_CONVERSATIONS);
+    }
+
+    getMessages(conversationId: string) {
+        return this.request<{ messages: any[] }>(API_CONFIG.ENDPOINTS.CONVERSATIONS.GET_MESSAGES(conversationId));
+    }
+
     private async uploadRequest<T>(path: string, formData: FormData): Promise<T> {
         const headers: Record<string, string> = {};
         const token = this.getAuthToken();

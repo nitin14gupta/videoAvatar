@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from routes.auth_routes import auth_router
 from routes.avatar_routes import avatar_router
+from routes.conversation_routes import conversation_router
+from routes.whisper_routes import whisper_router
 
 # Configure logging
 logging.basicConfig(
@@ -44,6 +46,8 @@ def create_app() -> FastAPI:
     # Register routers
     app.include_router(auth_router, prefix="/auth", tags=["auth"])
     app.include_router(avatar_router, prefix="/avatars", tags=["avatars"])
+    app.include_router(conversation_router, prefix="/conversations", tags=["conversations"])
+    app.include_router(whisper_router, prefix="/whisper", tags=["whisper"])
     
     # Log app startup
     logger.info("Application started successfully")

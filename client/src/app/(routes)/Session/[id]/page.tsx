@@ -5,22 +5,39 @@ import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { apiService } from "@/src/api/apiService";
+import { API_CONFIG } from "@/src/api/config";
 import { Avatar } from "@/src/api/config";
 import CustomCursor from "@/src/component/CustomCursor";
+import { useToast } from "@/src/context/ToastContext";
+
+interface Message {
+    sender: "user" | "avatar";
+    content: string;
+    timestamp: Date;
+}
 
 export default function SessionPage() {
     const params = useParams();
     const avatarId = params.id as string;
+    const { showError, showSuccess } = useToast();
 
     const [avatar, setAvatar] = useState<Avatar | null>(null);
     const [loading, setLoading] = useState(true);
     const [videoPermission, setVideoPermission] = useState<"granted" | "denied" | "pending">("pending");
     const [audioPermission, setAudioPermission] = useState<"granted" | "denied" | "pending">("pending");
     const [videoEnabled, setVideoEnabled] = useState(true);
-    const [audioEnabled, setAudioEnabled] = useState(true);
+    const [audioEnabled, setAudioEnabled] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const [transcription, setTranscription] = useState("");
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [conversationId, setConversationId] = useState<string | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
+    const mediaRecorderRef = useRef<any>(null); // Can be MediaRecorder or Web Audio processor
+    const websocketRef = useRef<WebSocket | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
 
     useEffect(() => {
         // Fetch avatar details
@@ -30,6 +47,7 @@ export default function SessionPage() {
                 setAvatar(res.avatar);
             } catch (error) {
                 console.error("Failed to fetch avatar:", error);
+                showError("Error", "Failed to load avatar");
             } finally {
                 setLoading(false);
             }
@@ -38,7 +56,7 @@ export default function SessionPage() {
         if (avatarId) {
             fetchAvatar();
         }
-    }, [avatarId]);
+    }, [avatarId, showError]);
 
     useEffect(() => {
         // Request camera and microphone permissions
@@ -46,7 +64,12 @@ export default function SessionPage() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: true,
-                    audio: true
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                    }
                 });
 
                 if (videoRef.current) {
@@ -73,8 +96,212 @@ export default function SessionPage() {
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
             }
+            if (websocketRef.current) {
+                websocketRef.current.close();
+            }
         };
     }, []);
+
+    const connectWebSocket = () => {
+        try {
+            const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'https' : 'http';
+            const wsUrl = API_CONFIG.ENDPOINTS.WHISPER.WEBSOCKET(protocol);
+
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log("WebSocket connected");
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === "transcription" && data.text) {
+                        setTranscription(prev => {
+                            // Append new text, handling partial updates
+                            if (prev && data.text.startsWith(prev)) {
+                                return data.text;
+                            }
+                            return prev + " " + data.text;
+                        });
+                    } else if (data.type === "final" && data.text) {
+                        setTranscription(data.text);
+                    } else if (data.type === "error") {
+                        console.error("Whisper error:", data.message);
+                        showError("Transcription Error", data.message);
+                    }
+                } catch (e) {
+                    console.error("Error parsing WebSocket message:", e);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error("WebSocket error:", error);
+                showError("Connection Error", "Failed to connect to transcription service");
+            };
+
+            ws.onclose = () => {
+                console.log("WebSocket closed");
+            };
+
+            websocketRef.current = ws;
+        } catch (error) {
+            console.error("Failed to create WebSocket:", error);
+            showError("Connection Error", "Failed to initialize transcription");
+        }
+    };
+
+    const startRecording = async () => {
+        if (!streamRef.current) {
+            showError("Error", "No audio stream available");
+            return;
+        }
+
+        try {
+            // Connect WebSocket first
+            connectWebSocket();
+
+            // Wait a bit for WebSocket to connect
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Use Web Audio API to capture raw PCM audio directly
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+            const source = audioContext.createMediaStreamSource(streamRef.current);
+
+            // Create a script processor to capture audio samples
+            const bufferSize = 4096;
+            const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+
+            const recordingState = { active: true };
+
+            processor.onaudioprocess = (event) => {
+                if (!recordingState.active || !websocketRef.current || websocketRef.current.readyState !== WebSocket.OPEN) {
+                    return;
+                }
+
+                try {
+                    const inputData = event.inputBuffer.getChannelData(0);
+                    const pcmData = new Int16Array(inputData.length);
+
+                    // Convert float32 (-1 to 1) to int16
+                    for (let i = 0; i < inputData.length; i++) {
+                        const sample = Math.max(-1, Math.min(1, inputData[i]));
+                        pcmData[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                    }
+
+                    // Send PCM data to WebSocket
+                    websocketRef.current.send(pcmData.buffer);
+                } catch (error) {
+                    console.error("Error processing audio:", error);
+                }
+            };
+
+            // Connect the processor
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+
+            // Store processor reference for cleanup
+            (mediaRecorderRef as any).current = { processor, audioContext, source, recordingState };
+
+            audioChunksRef.current = [];
+            setTranscription("");
+            setIsRecording(true);
+            setAudioEnabled(true);
+
+            // Enable audio track
+            if (streamRef.current) {
+                const audioTrack = streamRef.current.getAudioTracks()[0];
+                if (audioTrack) {
+                    audioTrack.enabled = true;
+                }
+            }
+        } catch (error) {
+            console.error("Error starting recording:", error);
+            showError("Recording Error", "Failed to start audio recording");
+        }
+    };
+
+    const stopRecording = async () => {
+        setIsRecording(false);
+        setAudioEnabled(false);
+
+        // Cleanup Web Audio API processor
+        if (mediaRecorderRef.current && (mediaRecorderRef.current as any).processor) {
+            const { processor, audioContext, source, recordingState } = mediaRecorderRef.current as any;
+            if (recordingState) {
+                recordingState.active = false;
+            }
+            try {
+                source.disconnect();
+                processor.disconnect();
+                processor.onaudioprocess = null;
+            } catch (e) {
+                console.error("Error disconnecting audio processor:", e);
+            }
+            mediaRecorderRef.current = null;
+        }
+
+        // Disable audio track
+        if (streamRef.current) {
+            const audioTrack = streamRef.current.getAudioTracks()[0];
+            if (audioTrack) {
+                audioTrack.enabled = false;
+            }
+        }
+
+        // Finalize transcription and close WebSocket
+        if (websocketRef.current) {
+            // Wait a bit for final audio chunks
+            await new Promise(resolve => setTimeout(resolve, 500));
+            websocketRef.current.close();
+        }
+
+        // Send final transcription to LLM if we have text
+        if (transcription.trim()) {
+            await sendToLLM(transcription.trim());
+        }
+    };
+
+    const sendToLLM = async (text: string) => {
+        if (!text.trim() || !avatar) return;
+
+        setIsProcessing(true);
+        try {
+            // Add user message to UI
+            const userMessage: Message = {
+                sender: "user",
+                content: text,
+                timestamp: new Date()
+            };
+            setMessages(prev => [...prev, userMessage]);
+
+            // Send to LLM
+            const response = await apiService.chatWithAvatar(avatarId, text, conversationId || undefined);
+
+            // Update conversation ID
+            if (response.conversation_id) {
+                setConversationId(response.conversation_id);
+            }
+
+            // Add avatar response to UI
+            const avatarMessage: Message = {
+                sender: "avatar",
+                content: response.avatar_response,
+                timestamp: new Date()
+            };
+            setMessages(prev => [...prev, avatarMessage]);
+
+            // Clear transcription
+            setTranscription("");
+
+            showSuccess("Response", "Avatar responded!");
+        } catch (error: any) {
+            console.error("Error sending to LLM:", error);
+            showError("Error", error?.message || "Failed to get avatar response");
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
     const toggleVideo = () => {
         if (streamRef.current) {
@@ -87,12 +314,10 @@ export default function SessionPage() {
     };
 
     const toggleAudio = () => {
-        if (streamRef.current) {
-            const audioTrack = streamRef.current.getAudioTracks()[0];
-            if (audioTrack) {
-                audioTrack.enabled = !audioTrack.enabled;
-                setAudioEnabled(audioTrack.enabled);
-            }
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
         }
     };
 
@@ -133,35 +358,79 @@ export default function SessionPage() {
                 </motion.div>
 
                 {/* Main Content */}
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Left Side - Avatar */}
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden">
+                    {/* Left Side - Avatar & Conversation */}
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="bg-[#171c2b] border border-[#4e99ff]/20 rounded-2xl p-6 flex flex-col"
+                        className="bg-[#171c2b] border border-[#4e99ff]/20 rounded-2xl p-6 flex flex-col overflow-hidden"
                     >
-                        <h2 className="text-xl font-bold text-white mb-4" style={{ fontFamily: 'var(--font-inter)' }}>
-                            {avatar.name}
-                        </h2>
-                        <p className="text-[#c3d3e2] mb-4" style={{ fontFamily: 'var(--font-inter)' }}>
-                            {avatar.role_title}
-                        </p>
-
-                        <div className="flex-1 flex items-center justify-center">
-                            <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-[#0fffc3]">
-                                <Image
-                                    src={avatar.image_url}
-                                    alt={avatar.name}
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
+                        <div className="mb-4">
+                            <h2 className="text-xl font-bold text-white mb-2" style={{ fontFamily: 'var(--font-inter)' }}>
+                                {avatar.name}
+                            </h2>
+                            <p className="text-[#c3d3e2] text-sm" style={{ fontFamily: 'var(--font-inter)' }}>
+                                {avatar.role_title}
+                            </p>
                         </div>
 
-                        {avatar.description && (
-                            <p className="text-[#c3d3e2] text-sm mt-4" style={{ fontFamily: 'var(--font-inter)' }}>
-                                {avatar.description}
-                            </p>
+                        {/* Avatar Image */}
+                        <div className="relative w-full aspect-square bg-[#101621] rounded-lg overflow-hidden mb-4">
+                            <Image
+                                src={avatar.image_url}
+                                alt={avatar.name}
+                                fill
+                                className="object-cover"
+                            />
+                        </div>
+
+                        {/* Conversation Messages */}
+                        <div className="flex-1 overflow-y-auto mb-4 space-y-3">
+                            {messages.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <p className="text-[#c3d3e2] text-sm" style={{ fontFamily: 'var(--font-inter)' }}>
+                                        Start speaking to begin the conversation
+                                    </p>
+                                </div>
+                            ) : (
+                                messages.map((msg, idx) => (
+                                    <motion.div
+                                        key={idx}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className={`p-3 rounded-lg ${msg.sender === "user"
+                                            ? "bg-[#4e99ff]/20 ml-auto max-w-[80%]"
+                                            : "bg-[#0fffc3]/10 mr-auto max-w-[80%]"
+                                            }`}
+                                    >
+                                        <p className="text-white text-sm" style={{ fontFamily: 'var(--font-inter)' }}>
+                                            {msg.content}
+                                        </p>
+                                    </motion.div>
+                                ))
+                            )}
+                            {isProcessing && (
+                                <div className="bg-[#0fffc3]/10 p-3 rounded-lg mr-auto max-w-[80%]">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-[#0fffc3] rounded-full animate-pulse" />
+                                        <p className="text-[#c3d3e2] text-sm" style={{ fontFamily: 'var(--font-inter)' }}>
+                                            {avatar.name} is thinking...
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Transcription Display */}
+                        {transcription && (
+                            <div className="bg-[#101621] border border-[#4e99ff]/30 rounded-lg p-3 mb-4">
+                                <p className="text-[#c3d3e2] text-xs mb-1" style={{ fontFamily: 'var(--font-inter)' }}>
+                                    You said:
+                                </p>
+                                <p className="text-white text-sm" style={{ fontFamily: 'var(--font-inter)' }}>
+                                    {transcription}
+                                </p>
+                            </div>
                         )}
                     </motion.div>
 
@@ -242,31 +511,30 @@ export default function SessionPage() {
                                     )}
                                 </button>
 
-                                {/* Audio Toggle */}
+                                {/* Audio/Mic Toggle */}
                                 <button
                                     onClick={toggleAudio}
-                                    className={`p-3 rounded-full transition-all ${audioEnabled
-                                        ? "bg-[#0fffc3] text-[#101621] hover:bg-[#0fffc3]/80"
-                                        : "bg-[#ef476f] text-white hover:bg-[#ef476f]/80"
+                                    className={`p-3 rounded-full transition-all ${isRecording
+                                        ? "bg-[#ef476f] text-white hover:bg-[#ef476f]/80 animate-pulse"
+                                        : "bg-[#0fffc3] text-[#101621] hover:bg-[#0fffc3]/80"
                                         }`}
-                                    title={audioEnabled ? "Mute microphone" : "Unmute microphone"}
+                                    title={isRecording ? "Stop recording" : "Start recording"}
                                 >
-                                    {audioEnabled ? (
-                                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                    {isRecording ? (
+                                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
                                         </svg>
                                     ) : (
                                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                                         </svg>
                                     )}
                                 </button>
                             </div>
                         )}
 
-                        {/* Permission Status */}
-                        <div className="mt-4 flex gap-4 text-sm">
+                        {/* Status Indicators */}
+                        <div className="mt-4 flex gap-4 text-sm justify-center">
                             <div className="flex items-center gap-2">
                                 <div className={`w-3 h-3 rounded-full ${videoPermission === "granted" && videoEnabled ? "bg-[#0fffc3]" :
                                     videoPermission === "granted" && !videoEnabled ? "bg-[#ef476f]" :
@@ -278,13 +546,13 @@ export default function SessionPage() {
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className={`w-3 h-3 rounded-full ${audioPermission === "granted" && audioEnabled ? "bg-[#0fffc3]" :
-                                    audioPermission === "granted" && !audioEnabled ? "bg-[#ef476f]" :
+                                <div className={`w-3 h-3 rounded-full ${isRecording ? "bg-[#ef476f] animate-pulse" :
+                                    audioPermission === "granted" ? "bg-[#0fffc3]" :
                                         audioPermission === "denied" ? "bg-[#ef476f]" :
                                             "bg-[#4e99ff]"
                                     }`} />
                                 <span className="text-[#c3d3e2]" style={{ fontFamily: 'var(--font-inter)' }}>
-                                    Microphone: {audioPermission === "granted" ? (audioEnabled ? "On" : "Off") : audioPermission === "denied" ? "Denied" : "Pending"}
+                                    Mic: {isRecording ? "Recording" : audioPermission === "granted" ? "Ready" : audioPermission === "denied" ? "Denied" : "Pending"}
                                 </span>
                             </div>
                         </div>

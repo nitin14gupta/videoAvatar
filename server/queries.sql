@@ -58,6 +58,32 @@ create index if not exists idx_avatars_created_by on public.avatars(created_by);
 create index if not exists idx_avatars_active on public.avatars(active);
 create index if not exists idx_avatars_role_title on public.avatars(role_title);
 
+-- Conversations table
+-- Stores conversation sessions between users and avatars
+create table if not exists public.conversations (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null,
+  avatar_id uuid not null references public.avatars(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Messages table
+-- Stores individual messages in conversations
+create table if not exists public.messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  sender text not null, -- 'user' or 'avatar'
+  content text not null,
+  created_at timestamptz not null default now()
+);
+
+-- Create indexes for faster lookups
+create index if not exists idx_conversations_user_id on public.conversations(user_id);
+create index if not exists idx_conversations_avatar_id on public.conversations(avatar_id);
+create index if not exists idx_messages_conversation_id on public.messages(conversation_id);
+create index if not exists idx_messages_created_at on public.messages(created_at);
+
 -- Insert default avatars (created_by = 'system')
 -- Doctor Avatar
 INSERT INTO public.avatars (

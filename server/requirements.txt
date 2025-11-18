@@ -18,4 +18,6 @@ numpy
 torch
 librosa 
 soundfile
+TTS
+requests
 hf_xet

@@ -201,6 +201,7 @@ def generate_speech(
         logger.info(f"Generating speech: text='{text[:50]}...', speaker='{speaker_wav_path}', language='{language}'")
         
         # Generate speech with voice cloning
+        # XTTS-v2 generates at 24kHz sample rate
         # Try the standard API first
         try:
             tts.tts_to_file(
@@ -209,6 +210,17 @@ def generate_speech(
                 speaker_wav=speaker_wav_path,
                 language=language
             )
+            # Verify and potentially fix sample rate if needed
+            try:
+                import soundfile as sf
+                data, sr = sf.read(output_path)
+                if sr != 24000:
+                    logger.warning(f"Audio sample rate is {sr}, resampling to 24000 Hz")
+                    import librosa
+                    data_resampled = librosa.resample(data, orig_sr=sr, target_sr=24000)
+                    sf.write(output_path, data_resampled, 24000)
+            except Exception as resample_error:
+                logger.warning(f"Could not verify/resample audio: {resample_error}")
         except AttributeError as attr_error:
             # If we get the 'generate' attribute error, try alternative approach
             if "'generate'" in str(attr_error) or "generate" in str(attr_error):
@@ -221,9 +233,9 @@ def generate_speech(
                         speaker_wav=speaker_wav_path,
                         language=language
                     )
-                    # Save the audio
+                    # Save the audio with correct sample rate (XTTS-v2 uses 24kHz)
                     import soundfile as sf
-                    sf.write(output_path, wav, samplerate=22050)
+                    sf.write(output_path, wav, samplerate=24000)
                 except Exception as alt_error:
                     logger.error(f"Alternative method also failed: {alt_error}")
                     raise attr_error

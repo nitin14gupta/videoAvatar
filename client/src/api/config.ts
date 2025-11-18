@@ -24,6 +24,7 @@ export const API_CONFIG = {
             DELETE: (id: string) => `/avatars/${id}`,
             UPLOAD_IMAGE: '/avatars/upload-image',
             UPLOAD_AUDIO: '/avatars/upload-audio',
+            GENERATE_PROMPT: '/avatars/generate-prompt',
         },
         HEALTH: '/health',
     },

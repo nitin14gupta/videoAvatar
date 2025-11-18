@@ -8,6 +8,7 @@ import { Avatar } from "@/src/api/config";
 import CustomCursor from "@/src/component/CustomCursor";
 import AvatarCard from "@/src/component/AvatarCard";
 import ConversationCard from "@/src/component/ConversationCard";
+import CreateAvatarModal from "@/src/component/CreateAvatarModal";
 
 export default function DashboardPage() {
     const { user, logout } = useAuth();
@@ -16,26 +17,27 @@ export default function DashboardPage() {
     const [defaultAvatars, setDefaultAvatars] = useState<Avatar[]>([]);
     const [userAvatars, setUserAvatars] = useState<Avatar[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showCreateModal, setShowCreateModal] = useState(false);
 
     // Fetch avatars from API
+    const fetchAvatars = async () => {
+        try {
+            setLoading(true);
+            const [defaultRes, myAvatarsRes] = await Promise.all([
+                apiService.getDefaultAvatars(),
+                apiService.getMyAvatars().catch(() => ({ avatars: [] })) // Handle if not authenticated
+            ]);
+
+            setDefaultAvatars(defaultRes.avatars || []);
+            setUserAvatars(myAvatarsRes.avatars || []);
+        } catch (error) {
+            console.error('Failed to fetch avatars:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchAvatars = async () => {
-            try {
-                setLoading(true);
-                const [defaultRes, myAvatarsRes] = await Promise.all([
-                    apiService.getDefaultAvatars(),
-                    apiService.getMyAvatars().catch(() => ({ avatars: [] })) // Handle if not authenticated
-                ]);
-
-                setDefaultAvatars(defaultRes.avatars || []);
-                setUserAvatars(myAvatarsRes.avatars || []);
-            } catch (error) {
-                console.error('Failed to fetch avatars:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchAvatars();
     }, []);
 
@@ -85,6 +87,7 @@ export default function DashboardPage() {
                             avatars={userAvatars}
                             emptyMessage="No avatars yet, upload to get started!"
                             showCreateButton={true}
+                            onCreateClick={() => setShowCreateModal(true)}
                         />
                     </div>
                 )}
@@ -94,7 +97,17 @@ export default function DashboardPage() {
             </main>
 
             {/* Floating Create Button */}
-            <FloatingCreateButton />
+            <FloatingCreateButton onClick={() => setShowCreateModal(true)} />
+
+            {/* Create Avatar Modal */}
+            <CreateAvatarModal
+                isOpen={showCreateModal}
+                onClose={() => setShowCreateModal(false)}
+                onSuccess={() => {
+                    fetchAvatars();
+                    setShowCreateModal(false);
+                }}
+            />
         </div>
     );
 }
@@ -250,12 +263,14 @@ function AvatarsSection({
     title,
     avatars,
     emptyMessage,
-    showCreateButton = false
+    showCreateButton = false,
+    onCreateClick
 }: {
     title: string;
     avatars: Avatar[];
     emptyMessage: string;
     showCreateButton?: boolean;
+    onCreateClick?: () => void;
 }) {
     return (
         <motion.div
@@ -269,7 +284,10 @@ function AvatarsSection({
                     {title}
                 </h2>
                 {showCreateButton && (
-                    <button className="px-4 py-2 bg-gradient-to-r from-[#4e99ff] to-[#be65ff] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity" style={{ fontFamily: 'var(--font-inter)' }}>
+                    <button
+                        onClick={onCreateClick}
+                        className="px-4 py-2 bg-gradient-to-r from-[#4e99ff] to-[#be65ff] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity" style={{ fontFamily: 'var(--font-inter)' }}
+                    >
                         + Create New
                     </button>
                 )}
@@ -286,6 +304,18 @@ function AvatarsSection({
                     {avatars.map((avatar) => (
                         <AvatarCard key={avatar.id} avatar={avatar} />
                     ))}
+                    {showCreateButton && onCreateClick && (
+                        <motion.button
+                            onClick={onCreateClick}
+                            className="bg-[#101621] border-2 border-dashed border-[#4e99ff]/30 rounded-xl p-4 hover:border-[#0fffc3] transition-all flex flex-col items-center justify-center aspect-square group"
+                            whileHover={{ scale: 1.02 }}
+                        >
+                            <svg className="w-8 h-8 text-[#4e99ff] group-hover:text-[#0fffc3] transition-colors mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            <span className="text-[#c3d3e2] group-hover:text-white text-xs font-semibold" style={{ fontFamily: 'var(--font-inter)' }}>Create New</span>
+                        </motion.button>
+                    )}
                 </div>
             )}
         </motion.div>
@@ -323,12 +353,13 @@ function AvatarsSection({
 // }
 
 // Floating Create Button
-function FloatingCreateButton() {
+function FloatingCreateButton({ onClick }: { onClick: () => void }) {
     return (
         <motion.button
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.5, type: "spring" }}
+            onClick={onClick}
             className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-[#0fffc3] to-[#4e99ff] rounded-full shadow-lg flex items-center justify-center text-[#101621] font-bold text-2xl hover:scale-110 transition-transform glow-mint z-40"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}

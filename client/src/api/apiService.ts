@@ -148,6 +148,13 @@ class ApiService {
         );
     }
 
+    generateTemplatePrompt(roleTitle: string, description: string, specialty?: string) {
+        return this.request<{ prompt: string }>(API_CONFIG.ENDPOINTS.AVATARS.GENERATE_PROMPT, {
+            method: 'POST',
+            body: JSON.stringify({ role_title: roleTitle, description, specialty }),
+        }).then(res => res.prompt);
+    }
+
     private async uploadRequest<T>(path: string, formData: FormData): Promise<T> {
         const headers: Record<string, string> = {};
         const token = this.getAuthToken();

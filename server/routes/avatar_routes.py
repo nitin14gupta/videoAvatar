@@ -5,8 +5,10 @@ from pydantic import BaseModel
 from typing import Optional, List
 from utils.auth_utils import decode_jwt
 from utils.r2_client import r2_client
+from utils.llm_utils import get_llm
 from db.config import get_supabase_client
 from io import BytesIO
+from langchain_core.messages import HumanMessage
 
 avatar_router = APIRouter()
 
@@ -37,6 +39,12 @@ class AvatarUpdateRequest(BaseModel):
     template_prompt: Optional[str] = None
     theme_color: Optional[str] = None
     active: Optional[bool] = None
+
+
+class GeneratePromptRequest(BaseModel):
+    role_title: str
+    description: str
+    specialty: Optional[str] = None
 
 
 def get_current_user_id(authorization: str = Header(None)) -> Optional[str]:
@@ -370,5 +378,48 @@ async def upload_avatar_audio(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload audio: {str(e)}"
+        )
+
+
+@avatar_router.post("/generate-prompt")
+async def generate_template_prompt(
+    request: GeneratePromptRequest,
+    user_id: Optional[str] = Depends(get_current_user_id)
+):
+    """Generate a template prompt using AI based on role and description"""
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
+        )
+    
+    try:
+        llm = get_llm(temperature=0.7)
+        
+        prompt_text = f"""Create a concise and effective system prompt for an AI conversational avatar with the following details:
+
+Role Title: {request.role_title}
+Description: {request.description}
+{f"Specialty: {request.specialty}" if request.specialty else ""}
+
+The prompt should:
+1. Define the avatar's role and expertise clearly
+2. Set the tone and personality (professional, friendly, etc.)
+3. Guide how the avatar should respond to users
+4. Be concise (2-3 sentences maximum)
+5. Focus on being helpful, accurate, and engaging
+
+Generate only the prompt text, no additional explanation:"""
+        
+        messages = [HumanMessage(content=prompt_text)]
+        response = llm.invoke(messages)
+        
+        generated_prompt = response.content.strip()
+        
+        return {"prompt": generated_prompt}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate prompt: {str(e)}"
         )
 

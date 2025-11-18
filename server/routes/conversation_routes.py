@@ -3,8 +3,11 @@ import time
 from fastapi import APIRouter, HTTPException, status, Depends, Header
 from pydantic import BaseModel
 from typing import Optional
+from io import BytesIO
 from utils.auth_utils import decode_jwt
 from utils.llm_utils import get_llm
+from utils.tts_utils import text_to_speech_with_voice_cloning
+from utils.r2_client import r2_client
 from db.config import get_supabase_client
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -22,6 +25,7 @@ class ConversationResponse(BaseModel):
     conversation_id: str
     message: str
     avatar_response: str
+    audio_url: Optional[str] = None
 
 
 def get_current_user_id(authorization: str = Header(None)) -> Optional[str]:
@@ -153,10 +157,46 @@ async def chat_with_avatar(
         # Update conversation timestamp
         conversations.update({"updated_at": time.strftime("%Y-%m-%d %H:%M:%S")}).eq("id", conversation_id).execute()
         
+        # Generate TTS audio with voice cloning
+        audio_url = None
+        try:
+            if avatar.get("audio_url"):
+                # Generate speech using avatar's reference audio
+                tts_audio_path = text_to_speech_with_voice_cloning(
+                    text=avatar_response,
+                    reference_audio_url=avatar.get("audio_url"),
+                    language=avatar.get("language", "en")
+                )
+                
+                if tts_audio_path and os.path.exists(tts_audio_path):
+                    # Upload to R2 storage
+                    with open(tts_audio_path, 'rb') as f:
+                        audio_bytes = BytesIO(f.read())
+                        audio_bytes.seek(0)
+                        
+                        upload_result = r2_client.upload_file(
+                            file_bytes=audio_bytes,
+                            file_name="tts_output.wav",
+                            folder="tts"
+                        )
+                        audio_url = upload_result.get("url")
+                    
+                    # Cleanup temp file
+                    try:
+                        os.remove(tts_audio_path)
+                    except Exception:
+                        pass
+        except Exception as e:
+            # Log error but don't fail the request
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to generate TTS audio: {e}")
+        
         return {
             "conversation_id": conversation_id,
             "message": request.message,
-            "avatar_response": avatar_response
+            "avatar_response": avatar_response,
+            "audio_url": audio_url
         }
         
     except HTTPException:

@@ -1,6 +1,7 @@
 fastapi
 uvicorn[standard]
 pydantic
+requests
 python-dotenv
 psycopg2-binary
 supabase
@@ -17,7 +18,7 @@ soundfile
 numpy 
 torch
 librosa 
-soundfile
 TTS
-requests
+transformers<4.36.0
 hf_xet
+gradio

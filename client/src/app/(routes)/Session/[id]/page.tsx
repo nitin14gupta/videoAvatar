@@ -32,6 +32,8 @@ export default function SessionPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+    const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -98,6 +100,10 @@ export default function SessionPage() {
             }
             if (websocketRef.current) {
                 websocketRef.current.close();
+            }
+            if (audioPlayerRef.current) {
+                audioPlayerRef.current.pause();
+                audioPlayerRef.current = null;
             }
         };
     }, []);
@@ -291,6 +297,11 @@ export default function SessionPage() {
             };
             setMessages(prev => [...prev, avatarMessage]);
 
+            // Play TTS audio if available
+            if (response.audio_url) {
+                playTTSAudio(response.audio_url);
+            }
+
             // Clear transcription
             setTranscription("");
 
@@ -300,6 +311,39 @@ export default function SessionPage() {
             showError("Error", error?.message || "Failed to get avatar response");
         } finally {
             setIsProcessing(false);
+        }
+    };
+
+    const playTTSAudio = (audioUrl: string) => {
+        try {
+            // Stop any currently playing audio
+            if (audioPlayerRef.current) {
+                audioPlayerRef.current.pause();
+                audioPlayerRef.current = null;
+            }
+
+            // Create new audio element and play
+            const audio = new Audio(audioUrl);
+            audioPlayerRef.current = audio;
+            setPlayingAudio(audioUrl);
+
+            audio.onended = () => {
+                setPlayingAudio(null);
+                audioPlayerRef.current = null;
+            };
+
+            audio.onerror = () => {
+                console.error("Error playing TTS audio");
+                setPlayingAudio(null);
+                audioPlayerRef.current = null;
+            };
+
+            audio.play().catch((error) => {
+                console.error("Error playing audio:", error);
+                setPlayingAudio(null);
+            });
+        } catch (error) {
+            console.error("Error setting up TTS audio:", error);
         }
     };
 
@@ -415,6 +459,16 @@ export default function SessionPage() {
                                         <div className="w-2 h-2 bg-[#0fffc3] rounded-full animate-pulse" />
                                         <p className="text-[#c3d3e2] text-sm" style={{ fontFamily: 'var(--font-inter)' }}>
                                             {avatar.name} is thinking...
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                            {playingAudio && (
+                                <div className="bg-[#4e99ff]/20 p-3 rounded-lg mr-auto max-w-[80%]">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-[#4e99ff] rounded-full animate-pulse" />
+                                        <p className="text-[#c3d3e2] text-sm" style={{ fontFamily: 'var(--font-inter)' }}>
+                                            🔊 {avatar.name} is speaking...
                                         </p>
                                     </div>
                                 </div>

@@ -157,7 +157,7 @@ class ApiService {
 
     // Conversation endpoints
     chatWithAvatar(avatarId: string, message: string, conversationId?: string) {
-        return this.request<{ conversation_id: string; message: string; avatar_response: string }>(
+        return this.request<{ conversation_id: string; message: string; avatar_response: string; audio_url?: string }>(
             API_CONFIG.ENDPOINTS.CONVERSATIONS.CHAT,
             {
                 method: 'POST',

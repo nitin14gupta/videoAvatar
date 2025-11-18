@@ -16,6 +16,8 @@ export default function SessionPage() {
     const [loading, setLoading] = useState(true);
     const [videoPermission, setVideoPermission] = useState<"granted" | "denied" | "pending">("pending");
     const [audioPermission, setAudioPermission] = useState<"granted" | "denied" | "pending">("pending");
+    const [videoEnabled, setVideoEnabled] = useState(true);
+    const [audioEnabled, setAudioEnabled] = useState(true);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -49,6 +51,7 @@ export default function SessionPage() {
 
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
+                    videoRef.current.play().catch(console.error);
                     streamRef.current = stream;
                 }
 
@@ -72,6 +75,26 @@ export default function SessionPage() {
             }
         };
     }, []);
+
+    const toggleVideo = () => {
+        if (streamRef.current) {
+            const videoTrack = streamRef.current.getVideoTracks()[0];
+            if (videoTrack) {
+                videoTrack.enabled = !videoTrack.enabled;
+                setVideoEnabled(videoTrack.enabled);
+            }
+        }
+    };
+
+    const toggleAudio = () => {
+        if (streamRef.current) {
+            const audioTrack = streamRef.current.getAudioTracks()[0];
+            if (audioTrack) {
+                audioTrack.enabled = !audioTrack.enabled;
+                setAudioEnabled(audioTrack.enabled);
+            }
+        }
+    };
 
     if (loading) {
         return (
@@ -152,7 +175,7 @@ export default function SessionPage() {
                             Your Video
                         </h2>
 
-                        <div className="flex-1 flex items-center justify-center bg-[#101621] rounded-lg overflow-hidden relative">
+                        <div className="flex-1 flex items-center justify-center bg-[#101621] rounded-lg overflow-hidden relative min-h-[400px]">
                             {videoPermission === "pending" && (
                                 <div className="text-center p-8">
                                     <div className="text-[#c3d3e2] mb-4" style={{ fontFamily: 'var(--font-inter)' }}>
@@ -173,34 +196,95 @@ export default function SessionPage() {
                             )}
 
                             {videoPermission === "granted" && (
-                                <video
-                                    ref={videoRef}
-                                    autoPlay
-                                    muted
-                                    playsInline
-                                    className="w-full h-full object-cover"
-                                />
+                                <>
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        muted
+                                        playsInline
+                                        className="absolute inset-0 w-full h-full object-cover"
+                                        style={{ display: videoEnabled ? 'block' : 'none' }}
+                                    />
+                                    {!videoEnabled && (
+                                        <div className="absolute inset-0 bg-[#101621] flex items-center justify-center">
+                                            <div className="text-center">
+                                                <svg className="w-16 h-16 text-[#4e99ff] mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                </svg>
+                                                <p className="text-[#c3d3e2]" style={{ fontFamily: 'var(--font-inter)' }}>Camera Off</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
+
+                        {/* Control Buttons */}
+                        {videoPermission === "granted" && (
+                            <div className="mt-4 flex items-center justify-center gap-4">
+                                {/* Video Toggle */}
+                                <button
+                                    onClick={toggleVideo}
+                                    className={`p-3 rounded-full transition-all ${videoEnabled
+                                        ? "bg-[#0fffc3] text-[#101621] hover:bg-[#0fffc3]/80"
+                                        : "bg-[#ef476f] text-white hover:bg-[#ef476f]/80"
+                                        }`}
+                                    title={videoEnabled ? "Turn off camera" : "Turn on camera"}
+                                >
+                                    {videoEnabled ? (
+                                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                        </svg>
+                                    )}
+                                </button>
+
+                                {/* Audio Toggle */}
+                                <button
+                                    onClick={toggleAudio}
+                                    className={`p-3 rounded-full transition-all ${audioEnabled
+                                        ? "bg-[#0fffc3] text-[#101621] hover:bg-[#0fffc3]/80"
+                                        : "bg-[#ef476f] text-white hover:bg-[#ef476f]/80"
+                                        }`}
+                                    title={audioEnabled ? "Mute microphone" : "Unmute microphone"}
+                                >
+                                    {audioEnabled ? (
+                                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
+                        )}
 
                         {/* Permission Status */}
                         <div className="mt-4 flex gap-4 text-sm">
                             <div className="flex items-center gap-2">
-                                <div className={`w-3 h-3 rounded-full ${videoPermission === "granted" ? "bg-[#0fffc3]" :
-                                    videoPermission === "denied" ? "bg-[#ef476f]" :
-                                        "bg-[#4e99ff]"
+                                <div className={`w-3 h-3 rounded-full ${videoPermission === "granted" && videoEnabled ? "bg-[#0fffc3]" :
+                                    videoPermission === "granted" && !videoEnabled ? "bg-[#ef476f]" :
+                                        videoPermission === "denied" ? "bg-[#ef476f]" :
+                                            "bg-[#4e99ff]"
                                     }`} />
                                 <span className="text-[#c3d3e2]" style={{ fontFamily: 'var(--font-inter)' }}>
-                                    Camera: {videoPermission === "granted" ? "On" : videoPermission === "denied" ? "Denied" : "Pending"}
+                                    Camera: {videoPermission === "granted" ? (videoEnabled ? "On" : "Off") : videoPermission === "denied" ? "Denied" : "Pending"}
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className={`w-3 h-3 rounded-full ${audioPermission === "granted" ? "bg-[#0fffc3]" :
-                                    audioPermission === "denied" ? "bg-[#ef476f]" :
-                                        "bg-[#4e99ff]"
+                                <div className={`w-3 h-3 rounded-full ${audioPermission === "granted" && audioEnabled ? "bg-[#0fffc3]" :
+                                    audioPermission === "granted" && !audioEnabled ? "bg-[#ef476f]" :
+                                        audioPermission === "denied" ? "bg-[#ef476f]" :
+                                            "bg-[#4e99ff]"
                                     }`} />
                                 <span className="text-[#c3d3e2]" style={{ fontFamily: 'var(--font-inter)' }}>
-                                    Microphone: {audioPermission === "granted" ? "On" : audioPermission === "denied" ? "Denied" : "Pending"}
+                                    Microphone: {audioPermission === "granted" ? (audioEnabled ? "On" : "Off") : audioPermission === "denied" ? "Denied" : "Pending"}
                                 </span>
                             </div>
                         </div>
@@ -210,4 +294,3 @@ export default function SessionPage() {
         </div>
     );
 }
-

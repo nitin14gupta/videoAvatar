@@ -157,12 +157,79 @@ class ApiService {
 
     // Conversation endpoints
     chatWithAvatar(avatarId: string, message: string, conversationId?: string) {
-        return this.request<{ conversation_id: string; message: string; avatar_response: string; audio_url?: string }>(
+        return this.request<{ conversation_id: string; message: string; avatar_response: string; audio_data?: string }>(
             API_CONFIG.ENDPOINTS.CONVERSATIONS.CHAT,
             {
                 method: 'POST',
                 body: JSON.stringify({ avatar_id: avatarId, message, conversation_id: conversationId }),
             }
+        );
+    }
+
+    // Streaming chat with WebSocket
+    createStreamingChat(
+        avatarId: string,
+        message: string,
+        conversationId: string | undefined,
+        onTextChunk: (text: string) => void,
+        onAudioChunk: (text: string, audioBase64: string) => void,
+        onComplete: (fullResponse: string, conversationId: string) => void,
+        onError: (error: string) => void
+    ): WebSocket {
+        const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws';
+        // Extract host from baseURL (remove http:// or https://)
+        const host = this.baseURL.replace(/^https?:\/\//, '').replace(/\/$/, '');
+        const wsUrl = `${protocol}://${host}/conversations/chat/stream?avatar_id=${encodeURIComponent(avatarId)}&message=${encodeURIComponent(message)}${conversationId ? `&conversation_id=${encodeURIComponent(conversationId)}` : ''}`;
+
+        const ws = new WebSocket(wsUrl);
+        const token = this.getAuthToken();
+
+        ws.onopen = () => {
+            // Send auth token
+            ws.send(JSON.stringify({ token: token ? `Bearer ${token}` : '' }));
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+
+                switch (data.type) {
+                    case 'conversation_id':
+                        // Store conversation ID for future chunks
+                        break;
+                    case 'text_chunk':
+                        onTextChunk(data.text);
+                        break;
+                    case 'audio_chunk':
+                        onAudioChunk(data.text, data.audio);
+                        break;
+                    case 'complete':
+                        onComplete(data.full_response, data.conversation_id || conversationId || '');
+                        break;
+                    case 'error':
+                        onError(data.message);
+                        break;
+                }
+            } catch (e) {
+                console.error('Error parsing WebSocket message:', e);
+            }
+        };
+
+        ws.onerror = (error) => {
+            onError('WebSocket connection error');
+        };
+
+        ws.onclose = () => {
+            // Connection closed
+        };
+
+        return ws;
+    }
+
+    // Get initialization status
+    getInitializationStatus() {
+        return this.request<{ whisper: boolean; tts: boolean; llm: boolean; initializing: boolean }>(
+            '/initialization-status'
         );
     }
 

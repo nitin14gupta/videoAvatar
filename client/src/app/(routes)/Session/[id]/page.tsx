@@ -33,7 +33,10 @@ export default function SessionPage() {
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+    const [isInitializing, setIsInitializing] = useState(true);
     const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+    const audioQueueRef = useRef<Array<{ url: string; audio: HTMLAudioElement }>>([]);
+    const isPlayingQueueRef = useRef(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -42,21 +45,45 @@ export default function SessionPage() {
     const audioChunksRef = useRef<Blob[]>([]);
 
     useEffect(() => {
-        // Fetch avatar details
-        const fetchAvatar = async () => {
+        // Check initialization status and fetch avatar
+        const initialize = async () => {
             try {
+                // Check if services are initialized
+                const initStatus = await apiService.getInitializationStatus();
+
+                if (!initStatus.whisper || !initStatus.tts || !initStatus.llm) {
+                    setIsInitializing(true);
+                    // Poll until initialized
+                    const checkInterval = setInterval(async () => {
+                        const status = await apiService.getInitializationStatus();
+                        if (status.whisper && status.tts && status.llm && !status.initializing) {
+                            clearInterval(checkInterval);
+                            setIsInitializing(false);
+                        }
+                    }, 1000);
+
+                    // Timeout after 60 seconds
+                    setTimeout(() => {
+                        clearInterval(checkInterval);
+                        setIsInitializing(false);
+                    }, 60000);
+                } else {
+                    setIsInitializing(false);
+                }
+
+                // Fetch avatar details
                 const res = await apiService.getAvatarById(avatarId);
                 setAvatar(res.avatar);
             } catch (error) {
-                console.error("Failed to fetch avatar:", error);
-                showError("Error", "Failed to load avatar");
+                console.error("Failed to initialize:", error);
+                showError("Error", "Failed to load session");
             } finally {
                 setLoading(false);
             }
         };
 
         if (avatarId) {
-            fetchAvatar();
+            initialize();
         }
     }, [avatarId, showError]);
 
@@ -101,6 +128,12 @@ export default function SessionPage() {
             if (websocketRef.current) {
                 websocketRef.current.close();
             }
+            // Cleanup audio queue
+            audioQueueRef.current.forEach(({ url, audio }) => {
+                audio.pause();
+                URL.revokeObjectURL(url);
+            });
+            audioQueueRef.current = [];
             if (audioPlayerRef.current) {
                 audioPlayerRef.current.pause();
                 audioPlayerRef.current = null;
@@ -281,70 +314,125 @@ export default function SessionPage() {
             };
             setMessages(prev => [...prev, userMessage]);
 
-            // Send to LLM
-            const response = await apiService.chatWithAvatar(avatarId, text, conversationId || undefined);
+            // Initialize avatar response message (will be updated as chunks arrives)
+            setMessages(prev => {
+                const initialAvatarMessage: Message = {
+                    sender: "avatar",
+                    content: "",
+                    timestamp: new Date()
+                };
+                return [...prev, initialAvatarMessage];
+            });
 
-            // Update conversation ID
-            if (response.conversation_id) {
-                setConversationId(response.conversation_id);
-            }
+            // Create streaming chat WebSocket
+            const ws = apiService.createStreamingChat(
+                avatarId,
+                text,
+                conversationId || undefined,
+                // onTextChunk - update UI with text as it arrives
+                (chunk: string) => {
+                    setMessages(prev => {
+                        const updated = [...prev];
+                        // Find the last avatar message (the one we just created)
+                        for (let i = updated.length - 1; i >= 0; i--) {
+                            if (updated[i].sender === "avatar") {
+                                updated[i] = {
+                                    ...updated[i],
+                                    content: updated[i].content + chunk
+                                };
+                                break;
+                            }
+                        }
+                        return updated;
+                    });
+                },
+                // onAudioChunk - play audio chunk immediately
+                (chunkText: string, audioBase64: string) => {
+                    playTTSAudioChunk(audioBase64);
+                },
+                // onComplete - finalize response
+                (fullResponse: string, newConversationId: string) => {
+                    if (newConversationId) {
+                        setConversationId(newConversationId);
+                    }
+                    setIsProcessing(false);
+                    setTranscription("");
+                    showSuccess("Response", "Avatar responded!");
+                },
+                // onError
+                (error: string) => {
+                    console.error("Streaming chat error:", error);
+                    showError("Error", error);
+                    setIsProcessing(false);
+                }
+            );
 
-            // Add avatar response to UI
-            const avatarMessage: Message = {
-                sender: "avatar",
-                content: response.avatar_response,
-                timestamp: new Date()
-            };
-            setMessages(prev => [...prev, avatarMessage]);
+            // Store WebSocket reference for cleanup
+            (websocketRef as any).current = ws;
 
-            // Play TTS audio if available
-            if (response.audio_url) {
-                playTTSAudio(response.audio_url);
-            }
-
-            // Clear transcription
-            setTranscription("");
-
-            showSuccess("Response", "Avatar responded!");
         } catch (error: any) {
-            console.error("Error sending to LLM:", error);
-            showError("Error", error?.message || "Failed to get avatar response");
-        } finally {
+            console.error("Error starting streaming chat:", error);
+            showError("Error", error?.message || "Failed to start conversation");
             setIsProcessing(false);
         }
     };
 
-    const playTTSAudio = (audioUrl: string) => {
+    const playTTSAudioChunk = (base64Data: string) => {
         try {
-            // Stop any currently playing audio
-            if (audioPlayerRef.current) {
-                audioPlayerRef.current.pause();
-                audioPlayerRef.current = null;
+            // Convert base64 to blob URL
+            const audioBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+            const blob = new Blob([audioBytes], { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(blob);
+
+            // Create audio element
+            const audio = new Audio(audioUrl);
+
+            // Add to queue
+            audioQueueRef.current.push({ url: audioUrl, audio });
+
+            // Start playing queue if not already playing
+            if (!isPlayingQueueRef.current) {
+                playNextInQueue();
             }
 
-            // Create new audio element and play
-            const audio = new Audio(audioUrl);
-            audioPlayerRef.current = audio;
+            // Show playing indicator
             setPlayingAudio(audioUrl);
-
-            audio.onended = () => {
-                setPlayingAudio(null);
-                audioPlayerRef.current = null;
-            };
-
-            audio.onerror = () => {
-                console.error("Error playing TTS audio");
-                setPlayingAudio(null);
-                audioPlayerRef.current = null;
-            };
-
-            audio.play().catch((error) => {
-                console.error("Error playing audio:", error);
-                setPlayingAudio(null);
-            });
         } catch (error) {
-            console.error("Error setting up TTS audio:", error);
+            console.error("Error setting up TTS audio chunk:", error);
         }
+    };
+
+    const playNextInQueue = () => {
+        if (audioQueueRef.current.length === 0) {
+            isPlayingQueueRef.current = false;
+            setPlayingAudio(null);
+            return;
+        }
+
+        isPlayingQueueRef.current = true;
+        const { url, audio } = audioQueueRef.current.shift()!;
+
+        audio.onended = () => {
+            URL.revokeObjectURL(url);
+            playNextInQueue(); // Play next chunk
+        };
+
+        audio.onerror = () => {
+            console.error("Error playing TTS audio chunk");
+            URL.revokeObjectURL(url);
+            playNextInQueue(); // Continue with next chunk
+        };
+
+        audio.play().catch((error) => {
+            console.error("Error playing audio chunk:", error);
+            URL.revokeObjectURL(url);
+            playNextInQueue();
+        });
+    };
+
+    const playTTSAudioFromBase64 = (base64Data: string) => {
+        // Legacy method for non-streaming (fallback)
+        playTTSAudioChunk(base64Data);
     };
 
     const toggleVideo = () => {
@@ -365,11 +453,19 @@ export default function SessionPage() {
         }
     };
 
-    if (loading) {
+    if (loading || isInitializing) {
         return (
             <div className="min-h-screen bg-[#101621] flex items-center justify-center">
-                <div className="text-white" style={{ fontFamily: 'var(--font-inter)' }}>
-                    Loading session...
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-[#4e99ff] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <div className="text-white" style={{ fontFamily: 'var(--font-inter)' }}>
+                        {isInitializing ? 'Initializing services...' : 'Loading session...'}
+                    </div>
+                    {isInitializing && (
+                        <div className="text-[#c3d3e2] text-sm mt-2" style={{ fontFamily: 'var(--font-inter)' }}>
+                            This may take a minute on first startup
+                        </div>
+                    )}
                 </div>
             </div>
         );

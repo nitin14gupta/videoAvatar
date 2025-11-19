@@ -1,15 +1,19 @@
 import os
 import time
-from fastapi import APIRouter, HTTPException, status, Depends, Header
+import asyncio
+import base64
+import logging
+import re
+from fastapi import APIRouter, HTTPException, status, Depends, Header, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from typing import Optional
-from io import BytesIO
 from utils.auth_utils import decode_jwt
 from utils.llm_utils import get_llm
-from utils.tts_utils import text_to_speech_with_voice_cloning
-from utils.r2_client import r2_client
+from utils.tts_utils import text_to_speech_with_voice_cloning_bytes
 from db.config import get_supabase_client
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+
+logger = logging.getLogger(__name__)
 
 conversation_router = APIRouter()
 
@@ -25,7 +29,7 @@ class ConversationResponse(BaseModel):
     conversation_id: str
     message: str
     avatar_response: str
-    audio_url: Optional[str] = None
+    audio_data: Optional[str] = None  # Base64 encoded audio
 
 
 def get_current_user_id(authorization: str = Header(None)) -> Optional[str]:
@@ -52,6 +56,246 @@ def _get_messages_table():
 
 def _get_avatars_table():
     return get_supabase_client().table("avatars")
+
+
+def split_into_chunks(text: str, min_chunk_size: int = 10, max_chunk_size: int = 30) -> list:
+    """
+    Split text into chunks for TTS generation.
+    Tries to split at sentence boundaries, falls back to word boundaries.
+    """
+    # First, try to split by sentences
+    sentences = re.split(r'([.!?]\s+)', text)
+    chunks = []
+    current_chunk = ""
+    
+    for part in sentences:
+        if not part.strip():
+            continue
+        
+        # If adding this part would exceed max_chunk_size, save current chunk
+        if current_chunk and len((current_chunk + part).split()) > max_chunk_size:
+            if len(current_chunk.split()) >= min_chunk_size:
+                chunks.append(current_chunk.strip())
+                current_chunk = part
+            else:
+                # If current chunk is too small, add to it anyway
+                current_chunk += part
+        else:
+            current_chunk += part
+        
+        # If current chunk has enough words, save it
+        if len(current_chunk.split()) >= min_chunk_size:
+            chunks.append(current_chunk.strip())
+            current_chunk = ""
+    
+    # Add remaining chunk
+    if current_chunk.strip():
+        chunks.append(current_chunk.strip())
+    
+    return chunks if chunks else [text]
+
+
+@conversation_router.websocket("/chat/stream")
+async def chat_with_avatar_stream(websocket: WebSocket):
+    """WebSocket endpoint for streaming chat with TTS chunks"""
+    await websocket.accept()
+    
+    try:
+        # Get parameters from query string
+        query_params = dict(websocket.query_params)
+        avatar_id = query_params.get("avatar_id", "")
+        message = query_params.get("message", "")
+        conversation_id = query_params.get("conversation_id")
+        
+        if not avatar_id or not message:
+            await websocket.send_json({"type": "error", "message": "avatar_id and message are required"})
+            await websocket.close()
+            return
+        
+        # Get user ID from token (sent as first message)
+        auth_data = await websocket.receive_json()
+        token = auth_data.get("token", "")
+        
+        user_id = None
+        if token:
+            decoded = decode_jwt(token.replace("Bearer ", ""))
+            if decoded:
+                user_id = decoded.get("sub")
+        
+        if not user_id:
+            await websocket.send_json({"type": "error", "message": "Authentication required"})
+            await websocket.close()
+            return
+        
+        # Get avatar details
+        avatars = _get_avatars_table()
+        avatar_res = avatars.select("*").eq("id", avatar_id).limit(1).execute()
+        
+        if not avatar_res.data:
+            await websocket.send_json({"type": "error", "message": "Avatar not found"})
+            await websocket.close()
+            return
+        
+        avatar = avatar_res.data[0]
+        
+        # Get or create conversation
+        conversations = _get_conversations_table()
+        if conversation_id:
+            conv_res = conversations.select("*").eq("id", conversation_id).eq("user_id", user_id).limit(1).execute()
+            if not conv_res.data:
+                await websocket.send_json({"type": "error", "message": "Conversation not found"})
+                await websocket.close()
+                return
+            conv_id = conversation_id
+        else:
+            conv_data = {
+                "user_id": user_id,
+                "avatar_id": avatar_id,
+                "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "updated_at": time.strftime("%Y-%m-%d %H:%M:%S")
+            }
+            conv_res = conversations.insert(conv_data).execute()
+            if not conv_res.data:
+                await websocket.send_json({"type": "error", "message": "Failed to create conversation"})
+                await websocket.close()
+                return
+            conv_id = conv_res.data[0].get("id")
+            await websocket.send_json({"type": "conversation_id", "conversation_id": conv_id})
+        
+        # Get conversation history
+        messages = _get_messages_table()
+        history_res = messages.select("*").eq("conversation_id", conv_id).order("created_at", desc=False).limit(10).execute()
+        history = history_res.data or []
+        
+        # Build LLM messages
+        llm_messages = []
+        if avatar.get("template_prompt"):
+            llm_messages.append(SystemMessage(content=avatar.get("template_prompt")))
+        else:
+            default_prompt = f"You are {avatar.get('name')}, a {avatar.get('role_title')}. {avatar.get('description', '')}. Be conversational, friendly, and helpful."
+            llm_messages.append(SystemMessage(content=default_prompt))
+        
+        for msg in history:
+            if msg.get("sender") == "user":
+                llm_messages.append(HumanMessage(content=msg.get("content", "")))
+            else:
+                llm_messages.append(AIMessage(content=msg.get("content", "")))
+        
+        llm_messages.append(HumanMessage(content=message))
+        
+        # Save user message to DB
+        user_msg_data = {
+            "conversation_id": conv_id,
+            "sender": "user",
+            "content": message,
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        messages.insert(user_msg_data).execute()
+        
+        # Stream LLM response
+        llm = get_llm(temperature=0.7)
+        full_response = ""
+        text_buffer = ""
+        
+        # Stream LLM tokens
+        async for chunk in llm.astream(llm_messages):
+            if chunk.content:
+                text_buffer += chunk.content
+                full_response += chunk.content
+                
+                # Send text chunk to frontend
+                await websocket.send_json({
+                    "type": "text_chunk",
+                    "text": chunk.content
+                })
+                
+                # Check if we have enough text for a TTS chunk (sentence or ~15 words)
+                words = text_buffer.split()
+                if len(words) >= 15 or any(punct in text_buffer for punct in ['.', '!', '?']):
+                    # Find sentence boundary
+                    sentence_end = max(
+                        text_buffer.rfind('.'),
+                        text_buffer.rfind('!'),
+                        text_buffer.rfind('?')
+                    )
+                    
+                    if sentence_end > 0:
+                        tts_chunk = text_buffer[:sentence_end + 1].strip()
+                        text_buffer = text_buffer[sentence_end + 1:].strip()
+                    else:
+                        # No sentence boundary, use word boundary
+                        tts_chunk = ' '.join(words[:15])
+                        text_buffer = ' '.join(words[15:])
+                    
+                    if tts_chunk and len(tts_chunk.split()) >= 5:  # Minimum 5 words
+                        # Generate TTS for this chunk
+                        try:
+                            if avatar.get("audio_url"):
+                                audio_bytes = await asyncio.to_thread(
+                                    text_to_speech_with_voice_cloning_bytes,
+                                    tts_chunk,
+                                    avatar.get("audio_url"),
+                                    avatar.get("language", "en")
+                                )
+                                
+                                if audio_bytes:
+                                    audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+                                    await websocket.send_json({
+                                        "type": "audio_chunk",
+                                        "text": tts_chunk,
+                                        "audio": audio_base64
+                                    })
+                        except Exception as e:
+                            logger.error(f"Error generating TTS chunk: {e}")
+        
+        # Process remaining text buffer
+        if text_buffer.strip() and len(text_buffer.split()) >= 5:
+            try:
+                if avatar.get("audio_url"):
+                    audio_bytes = await asyncio.to_thread(
+                        text_to_speech_with_voice_cloning_bytes,
+                        text_buffer.strip(),
+                        avatar.get("audio_url"),
+                        avatar.get("language", "en")
+                    )
+                    
+                    if audio_bytes:
+                        audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+                        await websocket.send_json({
+                            "type": "audio_chunk",
+                            "text": text_buffer.strip(),
+                            "audio": audio_base64
+                        })
+            except Exception as e:
+                logger.error(f"Error generating final TTS chunk: {e}")
+        
+        # Save full avatar response to DB
+        avatar_msg_data = {
+            "conversation_id": conv_id,
+            "sender": "avatar",
+            "content": full_response.strip(),
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        messages.insert(avatar_msg_data).execute()
+        
+        # Update conversation timestamp
+        conversations.update({"updated_at": time.strftime("%Y-%m-%d %H:%M:%S")}).eq("id", conv_id).execute()
+        
+        # Send completion signal
+        await websocket.send_json({
+            "type": "complete",
+            "full_response": full_response.strip(),
+            "conversation_id": conv_id
+        })
+        
+    except WebSocketDisconnect:
+        logger.info("WebSocket disconnected")
+    except Exception as e:
+        logger.error(f"Error in streaming chat: {e}", exc_info=True)
+        try:
+            await websocket.send_json({"type": "error", "message": str(e)})
+        except:
+            pass
 
 
 @conversation_router.post("/chat")
@@ -131,21 +375,50 @@ async def chat_with_avatar(
         # Add current user message
         llm_messages.append(HumanMessage(content=request.message))
         
-        # Get LLM response
-        llm = get_llm(temperature=0.7)
-        response = llm.invoke(llm_messages)
-        avatar_response = response.content.strip()
-        
-        # Save user message
+        # Prepare user message data for DB
         user_msg_data = {
             "conversation_id": conversation_id,
             "sender": "user",
             "content": request.message,
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
         }
-        messages.insert(user_msg_data).execute()
         
-        # Save avatar response
+        # Run LLM and DB save in parallel
+        def get_llm_response():
+            """Get LLM response"""
+            llm = get_llm(temperature=0.7)
+            response = llm.invoke(llm_messages)
+            return response.content.strip()
+        
+        def save_user_message():
+            """Save user message to DB"""
+            messages.insert(user_msg_data).execute()
+        
+        # Execute LLM and DB save simultaneously
+        avatar_response, _ = await asyncio.gather(
+            asyncio.to_thread(get_llm_response),
+            asyncio.to_thread(save_user_message)
+        )
+        
+        # Generate TTS audio directly (no R2 upload)
+        audio_data_base64 = None
+        try:
+            if avatar.get("audio_url"):
+                # Generate speech and get bytes directly
+                audio_bytes = text_to_speech_with_voice_cloning_bytes(
+                    text=avatar_response,
+                    reference_audio_url=avatar.get("audio_url"),
+                    language=avatar.get("language", "en")
+                )
+                
+                if audio_bytes:
+                    # Convert to base64 for JSON response
+                    audio_data_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+        except Exception as e:
+            # Log error but don't fail the request
+            logger.error(f"Failed to generate TTS audio: {e}")
+        
+        # Save avatar response to DB (after TTS generation to save time)
         avatar_msg_data = {
             "conversation_id": conversation_id,
             "sender": "avatar",
@@ -157,46 +430,11 @@ async def chat_with_avatar(
         # Update conversation timestamp
         conversations.update({"updated_at": time.strftime("%Y-%m-%d %H:%M:%S")}).eq("id", conversation_id).execute()
         
-        # Generate TTS audio with voice cloning
-        audio_url = None
-        try:
-            if avatar.get("audio_url"):
-                # Generate speech using avatar's reference audio
-                tts_audio_path = text_to_speech_with_voice_cloning(
-                    text=avatar_response,
-                    reference_audio_url=avatar.get("audio_url"),
-                    language=avatar.get("language", "en")
-                )
-                
-                if tts_audio_path and os.path.exists(tts_audio_path):
-                    # Upload to R2 storage
-                    with open(tts_audio_path, 'rb') as f:
-                        audio_bytes = BytesIO(f.read())
-                        audio_bytes.seek(0)
-                        
-                        upload_result = r2_client.upload_file(
-                            file_bytes=audio_bytes,
-                            file_name="tts_output.wav",
-                            folder="tts"
-                        )
-                        audio_url = upload_result.get("url")
-                    
-                    # Cleanup temp file
-                    try:
-                        os.remove(tts_audio_path)
-                    except Exception:
-                        pass
-        except Exception as e:
-            # Log error but don't fail the request
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to generate TTS audio: {e}")
-        
         return {
             "conversation_id": conversation_id,
             "message": request.message,
             "avatar_response": avatar_response,
-            "audio_url": audio_url
+            "audio_data": audio_data_base64
         }
         
     except HTTPException:

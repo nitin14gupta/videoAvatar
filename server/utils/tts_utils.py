@@ -254,6 +254,63 @@ def generate_speech(
         return None
 
 
+def text_to_speech_with_voice_cloning_bytes(
+    text: str,
+    reference_audio_url: str,
+    language: str = "en"
+) -> Optional[bytes]:
+    """
+    Generate TTS audio and return as bytes (no file saving, no R2 upload)
+    
+    Args:
+        text: Text to convert to speech
+        reference_audio_url: URL to reference audio file for voice cloning
+        language: Language code (default: "en")
+        
+    Returns:
+        Audio bytes (WAV format, 24kHz) or None if failed
+    """
+    try:
+        # Create temp file for reference audio
+        temp_dir = tempfile.gettempdir()
+        ref_audio_path = os.path.join(temp_dir, f"ref_audio_{os.getpid()}.wav")
+        
+        # Download reference audio
+        if not download_reference_audio(reference_audio_url, ref_audio_path):
+            logger.error("Failed to download reference audio")
+            return None
+        
+        # Generate speech to temp file
+        temp_output = os.path.join(temp_dir, f"tts_output_{os.getpid()}.wav")
+        result_path = generate_speech(
+            text=text,
+            speaker_wav_path=ref_audio_path,
+            language=language,
+            output_path=temp_output
+        )
+        
+        # Read audio bytes
+        audio_bytes = None
+        if result_path and os.path.exists(result_path):
+            with open(result_path, 'rb') as f:
+                audio_bytes = f.read()
+        
+        # Cleanup temp files
+        try:
+            if os.path.exists(ref_audio_path):
+                os.remove(ref_audio_path)
+            if os.path.exists(temp_output):
+                os.remove(temp_output)
+        except Exception as e:
+            logger.warning(f"Failed to cleanup temp files: {e}")
+        
+        return audio_bytes
+        
+    except Exception as e:
+        logger.error(f"Error in text_to_speech_with_voice_cloning_bytes: {e}")
+        return None
+
+
 def text_to_speech_with_voice_cloning(
     text: str,
     reference_audio_url: str,

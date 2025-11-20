@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "Terms of Service - EduCreate AI",
-    description: "Terms and conditions for using EduCreate AI educational content creation platform.",
+    title: "Terms of Service - LipSync AI",
+    description: "Terms and conditions for using LipSync AI educational content creation platform.",
 };
 
 export default function TermsPage() {
@@ -30,7 +30,7 @@ export default function TermsPage() {
                     <section className="mb-8">
                         <h2 className="text-2xl font-semibold text-neutral-900 mb-4">Agreement to Terms</h2>
                         <p className="text-neutral-700 leading-relaxed mb-4">
-                            These Terms of Service ("Terms") govern your use of EduCreate AI ("we," "our," or "us") and our AI-powered educational content creation platform (the "Service"). By accessing or using our Service, you agree to be bound by these Terms.
+                            These Terms of Service ("Terms") govern your use of LipSync AI ("we," "our," or "us") and our AI-powered educational content creation platform (the "Service"). By accessing or using our Service, you agree to be bound by these Terms.
                         </p>
                         <p className="text-neutral-700 leading-relaxed">
                             If you disagree with any part of these terms, then you may not access the Service.
@@ -40,7 +40,7 @@ export default function TermsPage() {
                     <section className="mb-8">
                         <h2 className="text-2xl font-semibold text-neutral-900 mb-4">Description of Service</h2>
                         <p className="text-neutral-700 leading-relaxed mb-4">
-                            EduCreate AI is an artificial intelligence-powered platform that enables users to create educational content including but not limited to:
+                            LipSync AI is an artificial intelligence-powered platform that enables users to create educational content including but not limited to:
                         </p>
                         <ul className="list-disc pl-6 text-neutral-700 space-y-2">
                             <li>Interactive lessons and courses</li>
@@ -110,7 +110,7 @@ export default function TermsPage() {
                         <h2 className="text-2xl font-semibold text-neutral-900 mb-4">Intellectual Property Rights</h2>
                         <h3 className="text-xl font-medium text-neutral-800 mb-3">Our Rights</h3>
                         <p className="text-neutral-700 leading-relaxed mb-4">
-                            The Service and its original content, features, and functionality are owned by EduCreate AI and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
+                            The Service and its original content, features, and functionality are owned by LipSync AI and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
                         </p>
 
                         <h3 className="text-xl font-medium text-neutral-800 mb-3">Your Content</h3>
@@ -183,7 +183,7 @@ export default function TermsPage() {
                     <section className="mb-8">
                         <h2 className="text-2xl font-semibold text-neutral-900 mb-4">Limitation of Liability</h2>
                         <p className="text-neutral-700 leading-relaxed mb-4">
-                            To the maximum extent permitted by law, EduCreate AI shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to:
+                            To the maximum extent permitted by law, LipSync AI shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to:
                         </p>
                         <ul className="list-disc pl-6 text-neutral-700 space-y-2">
                             <li>Loss of profits, data, or business opportunities</li>
@@ -214,7 +214,7 @@ export default function TermsPage() {
                     <section className="mb-8">
                         <h2 className="text-2xl font-semibold text-neutral-900 mb-4">Governing Law</h2>
                         <p className="text-neutral-700 leading-relaxed">
-                            These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in which EduCreate AI operates, without regard to conflict of law principles.
+                            These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in which LipSync AI operates, without regard to conflict of law principles.
                         </p>
                     </section>
 
@@ -224,8 +224,8 @@ export default function TermsPage() {
                             If you have any questions about these Terms of Service, please contact us:
                         </p>
                         <div className="bg-[#F5FBFC] p-6 rounded-lg">
-                            <p className="text-neutral-700 mb-2"><strong>Email:</strong> legal@educreate-ai.com</p>
-                            <p className="text-neutral-700 mb-2"><strong>Address:</strong> EduCreate AI, Legal Department</p>
+                            <p className="text-neutral-700 mb-2"><strong>Email:</strong> legal@lipsync-ai.com</p>
+                            <p className="text-neutral-700 mb-2"><strong>Address:</strong> LipSync AI, Legal Department</p>
                             <p className="text-neutral-700">We will respond to your inquiry within 30 days.</p>
                         </div>
                     </section>

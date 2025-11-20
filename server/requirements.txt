@@ -19,6 +19,6 @@ numpy
 torch
 librosa 
 TTS
-transformers<4.36.0
+transformers
 hf_xet
 gradio

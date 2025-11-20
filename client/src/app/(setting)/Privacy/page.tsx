@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "Privacy Policy - EduCreate AI",
-    description: "Learn how EduCreate AI protects your privacy and handles your data.",
+    title: "Privacy Policy - LipSync AI",
+    description: "Learn how LipSync AI protects your privacy and handles your data.",
 };
 
 export default function PrivacyPage() {
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
                     <section className="mb-8">
                         <h2 className="text-2xl font-semibold text-neutral-900 mb-4">Introduction</h2>
                         <p className="text-neutral-700 leading-relaxed mb-4">
-                            At EduCreate AI, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered educational content creation platform.
+                            At LipSync AI, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered educational content creation platform.
                         </p>
                         <p className="text-neutral-700 leading-relaxed">
                             By using our service, you agree to the collection and use of information in accordance with this policy.
@@ -149,8 +149,8 @@ export default function PrivacyPage() {
                             If you have any questions about this Privacy Policy or our data practices, please contact us:
                         </p>
                         <div className="bg-[#F5FBFC] p-6 rounded-lg">
-                            <p className="text-neutral-700 mb-2"><strong>Email:</strong> privacy@educreate-ai.com</p>
-                            <p className="text-neutral-700 mb-2"><strong>Address:</strong> EduCreate AI, Privacy Department</p>
+                            <p className="text-neutral-700 mb-2"><strong>Email:</strong> privacy@lipsync.com</p>
+                            <p className="text-neutral-700 mb-2"><strong>Address:</strong> LipSync AI, Privacy Department</p>
                             <p className="text-neutral-700">We will respond to your inquiry within 30 days.</p>
                         </div>
                     </section>

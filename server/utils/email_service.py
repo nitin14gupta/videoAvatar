@@ -27,7 +27,7 @@ class EmailService:
         try:
             # Create message
             msg = MIMEMultipart('alternative')
-            msg['Subject'] = 'eduCreate - Password Reset Code'
+            msg['Subject'] = 'LipSync - Password Reset Code'
             msg['From'] = self.smtp_username
             msg['To'] = email
             
@@ -37,14 +37,14 @@ class EmailService:
             <body style="font-family: 'Poppins', Arial, sans-serif; background-color: #FFF9F0; padding: 20px;">
                 <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                     <div style="text-align: center; margin-bottom: 30px;">
-                        <h1 style="color: #6B46C1; font-size: 28px; margin: 0;">eduCreate</h1>
+                        <h1 style="color: #6B46C1; font-size: 28px; margin: 0;">LipSync</h1>
                         <p style="color: #666; margin: 10px 0 0 0;">Your Learning Companion</p>
                     </div>
                     
                     <h2 style="color: #111827; font-size: 24px; margin-bottom: 20px;">Password Reset Code</h2>
                     
                     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-                        Hi there! We received a request to reset your password for your eduCreate account.
+                        Hi there! We received a request to reset your password for your LipSync account.
                     </p>
                     
                     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
@@ -64,7 +64,7 @@ class EmailService:
                     <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
                     
                     <p style="color: #9CA3AF; font-size: 12px; text-align: center; margin: 0;">
-                        This email was sent from eduCreate. If you have any questions, please contact our support team.
+                        This email was sent from LipSync. If you have any questions, please contact our support team.
                     </p>
                 </div>
             </body>
@@ -91,7 +91,7 @@ class EmailService:
         """Send welcome email after registration"""
         try:
             msg = MIMEMultipart('alternative')
-            msg['Subject'] = 'Welcome to eduCreate! 🌟'
+            msg['Subject'] = 'Welcome to LipSync! 🌟'
             msg['From'] = self.smtp_username
             msg['To'] = email
             
@@ -102,14 +102,14 @@ class EmailService:
             <body style="font-family: 'Poppins', Arial, sans-serif; background-color: #FFF9F0; padding: 20px;">
                 <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                     <div style="text-align: center; margin-bottom: 30px;">
-                        <h1 style="color: #6B46C1; font-size: 28px; margin: 0;">Welcome to eduCreate! 🌟</h1>
+                        <h1 style="color: #6B46C1; font-size: 28px; margin: 0;">Welcome to LipSync! 🌟</h1>
                         <p style="color: #666; margin: 10px 0 0 0;">Your Personal Growth Journey Starts Here</p>
                     </div>
                     
                     <h2 style="color: #111827; font-size: 24px; margin-bottom: 20px;">Hi {display_name}!</h2>
                     
                     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-                        Welcome to eduCreate! We're thrilled to have you join our learning community.
+                        Welcome to LipSync! We're thrilled to have you join our learning community.
                     </p>
                     
                     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
@@ -133,7 +133,7 @@ class EmailService:
                     <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
                     
                     <p style="color: #9CA3AF; font-size: 12px; text-align: center; margin: 0;">
-                        Thank you for choosing eduCreate. We're here to support you every step of the way.
+                        Thank you for choosing LipSync. We're here to support you every step of the way.
                     </p>
                 </div>
             </body>
@@ -158,7 +158,7 @@ class EmailService:
         """Send password changed notification email"""
         try:
             msg = MIMEMultipart('alternative')
-            msg['Subject'] = 'eduCreate - Password Changed Successfully'
+            msg['Subject'] = 'LipSync - Password Changed Successfully'
             msg['From'] = self.smtp_username
             msg['To'] = email
             
@@ -167,14 +167,14 @@ class EmailService:
             <body style="font-family: 'Poppins', Arial, sans-serif; background-color: #FFF9F0; padding: 20px;">
                 <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                     <div style="text-align: center; margin-bottom: 30px;">
-                        <h1 style="color: #6B46C1; font-size: 28px; margin: 0;">eduCreate</h1>
+                        <h1 style="color: #6B46C1; font-size: 28px; margin: 0;">LipSync</h1>
                         <p style="color: #666; margin: 10px 0 0 0;">Your Learning Companion</p>
                     </div>
                     
                     <h2 style="color: #111827; font-size: 24px; margin-bottom: 20px;">Password Changed Successfully</h2>
                     
                     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-                        Hi there! Your eduCreate account password has been successfully changed.
+                        Hi there! Your LipSync account password has been successfully changed.
                     </p>
                     
                     <div style="background-color: #D1FAE5; border: 1px solid #10B981; border-radius: 12px; padding: 20px; margin: 20px 0;">
@@ -190,7 +190,7 @@ class EmailService:
                     <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
                     
                     <p style="color: #9CA3AF; font-size: 12px; text-align: center; margin: 0;">
-                        This email was sent from eduCreate. If you have any questions, please contact our support team.
+                        This email was sent from LipSync. If you have any questions, please contact our support team.
                     </p>
                 </div>
             </body>
@@ -215,7 +215,7 @@ class EmailService:
         """Send login notification email"""
         try:
             msg = MIMEMultipart('alternative')
-            msg['Subject'] = 'eduCreate - New Login Detected'
+            msg['Subject'] = 'LipSync - New Login Detected'
             msg['From'] = self.smtp_username
             msg['To'] = email
             
@@ -224,7 +224,7 @@ class EmailService:
             <body style="font-family: 'Poppins', Arial, sans-serif; background-color: #FFF9F0; padding: 20px;">
                 <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                     <div style="text-align: center; margin-bottom: 30px;">
-                        <h1 style="color: #6B46C1; font-size: 28px; margin: 0;">eduCreate</h1>
+                        <h1 style="color: #6B46C1; font-size: 28px; margin: 0;">LipSync</h1>
                         <p style="color: #666; margin: 10px 0 0 0;">Your Learning Companion</p>
                     </div>
                     
@@ -278,7 +278,7 @@ class EmailService:
         """Send email verification code"""
         try:
             msg = MIMEMultipart('alternative')
-            msg['Subject'] = 'eduCreate - Verify Your Email Address'
+            msg['Subject'] = 'LipSync - Verify Your Email Address'
             msg['From'] = self.smtp_username
             msg['To'] = email
             
@@ -289,14 +289,14 @@ class EmailService:
             <body style="font-family: 'Poppins', Arial, sans-serif; background-color: #FFF9F0; padding: 20px;">
                 <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                     <div style="text-align: center; margin-bottom: 30px;">
-                        <h1 style="color: #6B46C1; font-size: 28px; margin: 0;">eduCreate</h1>
+                        <h1 style="color: #6B46C1; font-size: 28px; margin: 0;">LipSync</h1>
                         <p style="color: #666; margin: 10px 0 0 0;">Your Learning Companion</p>
                     </div>
                     
                     <h2 style="color: #111827; font-size: 24px; margin-bottom: 20px;">Verify Your Email Address</h2>
                     
                     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-                        Hi {display_name}! Thank you for signing up for eduCreate.
+                        Hi {display_name}! Thank you for signing up for LipSync.
                     </p>
                     
                     <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
@@ -319,13 +319,13 @@ class EmailService:
                     </div>
                     
                     <p style="color: #6B7280; font-size: 14px; line-height: 1.5; margin-top: 30px;">
-                        If you didn't create an account with eduCreate, please ignore this email.
+                        If you didn't create an account with LipSync, please ignore this email.
                     </p>
                     
                     <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
                     
                     <p style="color: #9CA3AF; font-size: 12px; text-align: center; margin: 0;">
-                        This email was sent from eduCreate. If you have any questions, please contact our support team.
+                        This email was sent from LipSync. If you have any questions, please contact our support team.
                     </p>
                 </div>
             </body>

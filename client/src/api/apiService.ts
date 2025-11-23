@@ -172,7 +172,7 @@ class ApiService {
         message: string,
         conversationId: string | undefined,
         onTextChunk: (text: string) => void,
-        onAudioChunk: (text: string, audioBase64: string) => void,
+        onAudioChunk: (text: string, audioBase64: string, videoBase64?: string) => void,
         onComplete: (fullResponse: string, conversationId: string) => void,
         onError: (error: string) => void
     ): WebSocket {
@@ -201,7 +201,7 @@ class ApiService {
                         onTextChunk(data.text);
                         break;
                     case 'audio_chunk':
-                        onAudioChunk(data.text, data.audio);
+                        onAudioChunk(data.text, data.audio, data.video);
                         break;
                     case 'complete':
                         onComplete(data.full_response, data.conversation_id || conversationId || '');

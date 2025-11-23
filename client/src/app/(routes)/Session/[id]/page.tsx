@@ -34,7 +34,9 @@ export default function SessionPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [playingAudio, setPlayingAudio] = useState<string | null>(null);
     const [isInitializing, setIsInitializing] = useState(true);
+    const [currentVideoUrl, setCurrentVideoUrl] = useState<string | null>(null);
     const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+    const videoPlayerRef = useRef<HTMLVideoElement | null>(null);
     const audioQueueRef = useRef<Array<{ url: string; audio: HTMLAudioElement }>>([]);
     const isPlayingQueueRef = useRef(false);
 
@@ -137,6 +139,15 @@ export default function SessionPage() {
             if (audioPlayerRef.current) {
                 audioPlayerRef.current.pause();
                 audioPlayerRef.current = null;
+            }
+            // Cleanup video
+            if (currentVideoUrl) {
+                URL.revokeObjectURL(currentVideoUrl);
+                setCurrentVideoUrl(null);
+            }
+            if (videoPlayerRef.current) {
+                videoPlayerRef.current.pause();
+                videoPlayerRef.current = null;
             }
         };
     }, []);
@@ -346,9 +357,12 @@ export default function SessionPage() {
                         return updated;
                     });
                 },
-                // onAudioChunk - play audio chunk immediately
-                (chunkText: string, audioBase64: string) => {
+                // onAudioChunk - play audio chunk immediately and display video if available
+                (chunkText: string, audioBase64: string, videoBase64?: string) => {
                     playTTSAudioChunk(audioBase64);
+                    if (videoBase64) {
+                        playLipSyncVideo(videoBase64);
+                    }
                 },
                 // onComplete - finalize response
                 (fullResponse: string, newConversationId: string) => {
@@ -428,6 +442,27 @@ export default function SessionPage() {
             URL.revokeObjectURL(url);
             playNextInQueue();
         });
+    };
+
+    const playLipSyncVideo = (videoBase64: string) => {
+        try {
+            // Convert base64 to blob URL
+            const videoBytes = Uint8Array.from(atob(videoBase64), c => c.charCodeAt(0));
+            const blob = new Blob([videoBytes], { type: 'video/mp4' });
+            const videoUrl = URL.createObjectURL(blob);
+
+            setCurrentVideoUrl(videoUrl);
+
+            // Play video if video element exists
+            if (videoPlayerRef.current) {
+                videoPlayerRef.current.src = videoUrl;
+                videoPlayerRef.current.play().catch((error) => {
+                    console.error("Error playing video:", error);
+                });
+            }
+        } catch (error) {
+            console.error("Error setting up lip-sync video:", error);
+        }
     };
 
     const playTTSAudioFromBase64 = (base64Data: string) => {
@@ -516,12 +551,31 @@ export default function SessionPage() {
 
                         {/* Avatar Image */}
                         <div className="relative w-full aspect-square bg-[#101621] rounded-lg overflow-hidden mb-4">
-                            <Image
-                                src={avatar.image_url}
-                                alt={avatar.name}
-                                fill
-                                className="object-cover"
-                            />
+                            {currentVideoUrl ? (
+                                <video
+                                    ref={videoPlayerRef}
+                                    src={currentVideoUrl}
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    className="w-full h-full object-cover"
+                                    onEnded={() => {
+                                        // Clean up when video ends
+                                        if (currentVideoUrl) {
+                                            URL.revokeObjectURL(currentVideoUrl);
+                                            setCurrentVideoUrl(null);
+                                        }
+                                    }}
+                                />
+                            ) : (
+                                <Image
+                                    src={avatar.image_url}
+                                    alt={avatar.name}
+                                    fill
+                                    className="object-cover"
+                                />
+                            )}
                         </div>
 
                         {/* Conversation Messages */}

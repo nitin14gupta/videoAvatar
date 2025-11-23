@@ -18,8 +18,22 @@ websockets
 soundfile 
 numpy 
 torch
+torchvision
 librosa 
 TTS
-transformers
+# Note: MuseTalk needs transformers==4.39.2, but TTS works with <4.36.0
+# If TTS fails, you may need to patch it or use separate environments
+transformers==4.39.2
 hf_xet
 gradio
+# MuseTalk dependencies
+diffusers==0.30.2
+accelerate==0.28.0
+opencv-python==4.9.0.80
+einops==0.8.1
+omegaconf
+ffmpeg-python
+moviepy
+imageio[ffmpeg]
+gdown
+huggingface_hub

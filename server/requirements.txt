@@ -7,8 +7,10 @@ psycopg2-binary
 supabase
 pyjwt
 bcrypt
+boto3
 email-validator
 python-multipart
+requests
 langchain-openai
 langchain-core
 faster-whisper 

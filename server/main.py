@@ -66,6 +66,8 @@ def initialize_services():
     except Exception as e:
         logger.error(f"✗ LLM initialization failed: {e}")
         _initialization_status["llm"] = False
+    
+    _initialization_status["initializing"] = False
     logger.info("Service initialization complete!")
 
 

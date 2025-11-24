@@ -24,7 +24,6 @@ _initialization_status = {
     "whisper": False,
     "tts": False,
     "llm": False,
-    "musetalk": False,
     "initializing": False
 }
 
@@ -67,19 +66,6 @@ def initialize_services():
     except Exception as e:
         logger.error(f"✗ LLM initialization failed: {e}")
         _initialization_status["llm"] = False
-    
-    try:
-        # Initialize MuseTalk for lip sync
-        logger.info("Initializing MuseTalk...")
-        from utils.musetalk_utils import initialize_musetalk
-        initialize_musetalk(use_float16=True, gpu_id=0)
-        _initialization_status["musetalk"] = True
-        logger.info("✓ MuseTalk initialized successfully")
-    except Exception as e:
-        logger.error(f"✗ MuseTalk initialization failed: {e}")
-        _initialization_status["musetalk"] = False
-    
-    _initialization_status["initializing"] = False
     logger.info("Service initialization complete!")
 
 

@@ -97,7 +97,7 @@ def split_into_chunks(text: str, min_chunk_size: int = 10, max_chunk_size: int =
 
 @conversation_router.websocket("/chat/stream")
 async def chat_with_avatar_stream(websocket: WebSocket):
-    """WebSocket endpoint for streaming chat with TTS chunks and lip-sync"""
+    """WebSocket endpoint for streaming chat with TTS chunks"""
     await websocket.accept()
     
     try:
@@ -240,29 +240,10 @@ async def chat_with_avatar_stream(websocket: WebSocket):
                                 
                                 if audio_bytes:
                                     audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
-                                    
-                                    # Generate lip-sync video frames
-                                    video_base64 = None
-                                    try:
-                                        from utils.musetalk_utils import generate_lip_sync_video, is_initialized
-                                        if is_initialized() and avatar.get("image_url"):
-                                            video_bytes = await asyncio.to_thread(
-                                                generate_lip_sync_video,
-                                                audio_bytes,
-                                                avatar_id,
-                                                avatar.get("image_url"),
-                                                fps=25
-                                            )
-                                            if video_bytes:
-                                                video_base64 = base64.b64encode(video_bytes).decode('utf-8')
-                                    except Exception as lip_sync_error:
-                                        logger.warning(f"Lip-sync generation failed (non-critical): {lip_sync_error}")
-                                    
                                     await websocket.send_json({
                                         "type": "audio_chunk",
                                         "text": tts_chunk,
-                                        "audio": audio_base64,
-                                        "video": video_base64  # Optional: lip-synced video frames
+                                        "audio": audio_base64
                                     })
                         except Exception as e:
                             logger.error(f"Error generating TTS chunk: {e}")
@@ -280,29 +261,10 @@ async def chat_with_avatar_stream(websocket: WebSocket):
                     
                     if audio_bytes:
                         audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
-                        
-                        # Generate lip-sync video frames
-                        video_base64 = None
-                        try:
-                            from utils.musetalk_utils import generate_lip_sync_video, is_initialized
-                            if is_initialized() and avatar.get("image_url"):
-                                video_bytes = await asyncio.to_thread(
-                                    generate_lip_sync_video,
-                                    audio_bytes,
-                                    avatar_id,
-                                    avatar.get("image_url"),
-                                    fps=25
-                                )
-                                if video_bytes:
-                                    video_base64 = base64.b64encode(video_bytes).decode('utf-8')
-                        except Exception as lip_sync_error:
-                            logger.warning(f"Lip-sync generation failed (non-critical): {lip_sync_error}")
-                        
                         await websocket.send_json({
                             "type": "audio_chunk",
                             "text": text_buffer.strip(),
-                            "audio": audio_base64,
-                            "video": video_base64  # Optional: lip-synced video frames
+                            "audio": audio_base64
                         })
             except Exception as e:
                 logger.error(f"Error generating final TTS chunk: {e}")
@@ -541,4 +503,3 @@ async def get_messages(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch messages: {str(e)}"
         )
-

@@ -12,6 +12,7 @@ from utils.llm_utils import get_llm
 from utils.tts_utils import text_to_speech_with_voice_cloning_bytes
 from utils.phrase_detector import extract_phrase
 from utils.streaming_tts import TTSQueue, generate_tts_async
+from utils.tts_text_cleaner import clean_and_validate_phrase
 from db.config import get_supabase_client
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -262,17 +263,23 @@ async def chat_with_avatar_stream(websocket: WebSocket):
                     phrase, remaining = extract_phrase(text_buffer, min_words=3, max_words=6)
                     
                     if phrase and len(phrase.strip()) > 0:
-                        # Start TTS generation for this phrase immediately (non-blocking)
-                        if tts_queue and avatar.get("audio_url"):
-                            chunk_id = chunk_id_counter
-                            chunk_id_counter += 1
-                            await tts_queue.add_tts_task(
-                                text=phrase.strip(),
-                                reference_audio_url=avatar.get("audio_url"),
-                                language=avatar.get("language", "en"),
-                                chunk_id=chunk_id
-                            )
-                            logger.debug(f"Started TTS for phrase: {phrase[:50]}...")
+                        # Clean and validate phrase for TTS
+                        cleaned_phrase = clean_and_validate_phrase(phrase.strip(), min_words=3)
+                        
+                        if cleaned_phrase:
+                            # Start TTS generation for this phrase immediately (non-blocking)
+                            if tts_queue and avatar.get("audio_url"):
+                                chunk_id = chunk_id_counter
+                                chunk_id_counter += 1
+                                await tts_queue.add_tts_task(
+                                    text=cleaned_phrase,
+                                    reference_audio_url=avatar.get("audio_url"),
+                                    language=avatar.get("language", "en"),
+                                    chunk_id=chunk_id
+                                )
+                                logger.debug(f"Started TTS for cleaned phrase: {cleaned_phrase[:50]}...")
+                        else:
+                            logger.debug(f"Skipped TTS for non-TTS-worthy phrase: {phrase[:50]}...")
                         
                         # Update buffer
                         text_buffer = remaining
@@ -283,14 +290,17 @@ async def chat_with_avatar_stream(websocket: WebSocket):
         # Process any remaining text in buffer
         if text_buffer.strip():
             remaining_text = text_buffer.strip()
-            if tts_queue and avatar.get("audio_url") and len(remaining_text.split()) >= 2:
+            # Clean and validate remaining text for TTS
+            cleaned_remaining = clean_and_validate_phrase(remaining_text, min_words=2)
+            if cleaned_remaining and tts_queue and avatar.get("audio_url"):
                 chunk_id = chunk_id_counter
                 await tts_queue.add_tts_task(
-                    text=remaining_text,
+                    text=cleaned_remaining,
                     reference_audio_url=avatar.get("audio_url"),
                     language=avatar.get("language", "en"),
                     chunk_id=chunk_id
                 )
+                logger.debug(f"Started TTS for remaining cleaned text: {cleaned_remaining[:50]}...")
         
         # Wait for all TTS tasks to complete
         if tts_queue:

@@ -6,13 +6,14 @@ import asyncio
 import logging
 from typing import Optional, AsyncGenerator
 from utils.tts_utils import text_to_speech_with_voice_cloning_bytes
+from utils.tts_text_cleaner import clean_text_for_tts, is_tts_worthy
 
 logger = logging.getLogger(__name__)
 
 # Global semaphore to limit concurrent TTS operations
 # XTTS-v2 doesn't handle many parallel CUDA operations well
 # Limit to 1 concurrent TTS operation to prevent CUDA errors
-TTS_SEMAPHORE = asyncio.Semaphore(2)
+TTS_SEMAPHORE = asyncio.Semaphore(1)
 
 
 async def generate_tts_async(
@@ -32,9 +33,17 @@ async def generate_tts_async(
     Returns:
         Audio bytes or None
     """
-    # Validate text length (prevent very short texts that might cause issues)
-    if not text or len(text.strip()) < 3:
-        logger.warning(f"Text too short for TTS: {text[:50]}")
+    # Clean and validate text for TTS
+    if not text or not text.strip():
+        logger.warning(f"Empty text provided for TTS")
+        return None
+    
+    # Clean the text (remove markdown, code blocks, etc.)
+    cleaned_text = clean_text_for_tts(text)
+    
+    # Validate text is TTS-worthy
+    if not is_tts_worthy(cleaned_text, min_length=3):
+        logger.warning(f"Text not TTS-worthy after cleaning: {text[:50]}... -> {cleaned_text[:50]}...")
         return None
     
     try:
@@ -42,9 +51,10 @@ async def generate_tts_async(
         # This prevents CUDA concurrency issues with XTTS-v2
         async with TTS_SEMAPHORE:
             # Run TTS in thread pool to avoid blocking
+            # Use cleaned_text instead of original text
             audio_bytes = await asyncio.to_thread(
                 text_to_speech_with_voice_cloning_bytes,
-                text.strip(),
+                cleaned_text,
                 reference_audio_url,
                 language
             )

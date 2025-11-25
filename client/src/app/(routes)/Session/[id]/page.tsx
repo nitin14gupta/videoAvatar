@@ -131,9 +131,14 @@ export default function SessionPage() {
                 const res = await apiService.getAvatarById(avatarId);
                 setAvatar(res.avatar);
                 
-                // Get blinking animation URL
-                const animationUrl = apiService.getBlinkingAnimationUrl(avatarId);
-                setBlinkingAnimationUrl(animationUrl);
+                // Use stored blinking video URL if available, otherwise fallback to generating on-the-fly
+                if (res.avatar.blinking_video_url) {
+                    setBlinkingAnimationUrl(res.avatar.blinking_video_url);
+                } else {
+                    // Fallback: generate on-the-fly (for backward compatibility or if processing failed)
+                    const animationUrl = apiService.getBlinkingAnimationUrl(avatarId);
+                    setBlinkingAnimationUrl(animationUrl);
+                }
             } catch (error) {
                 console.error("Failed to initialize:", error);
                 showError("Error", "Failed to load session");

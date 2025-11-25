@@ -49,6 +49,8 @@ create table if not exists public.avatars (
   theme_color text,
   active boolean default true,
   created_by text not null, -- 'system' for default avatars, user_id for user-created
+  training_status text default 'complete', -- 'pending', 'complete', 'failed' (for custom avatars)
+  blinking_video_url text, -- R2 URL to pre-generated blinking animation video
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -57,6 +59,7 @@ create table if not exists public.avatars (
 create index if not exists idx_avatars_created_by on public.avatars(created_by);
 create index if not exists idx_avatars_active on public.avatars(active);
 create index if not exists idx_avatars_role_title on public.avatars(role_title);
+create index if not exists idx_avatars_training_status on public.avatars(training_status);
 
 -- Conversations table
 -- Stores conversation sessions between users and avatars

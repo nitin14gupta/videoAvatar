@@ -79,6 +79,8 @@ export interface Avatar {
     theme_color?: string;
     active: boolean;
     created_by: string;
+    training_status?: 'pending' | 'complete' | 'failed';
+    blinking_video_url?: string;
     created_at: string;
     updated_at: string;
 }

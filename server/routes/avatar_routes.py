@@ -1,13 +1,15 @@
 import os
 import time
+import asyncio
 from fastapi import APIRouter, HTTPException, status, Depends, Header, UploadFile, File
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from utils.auth_utils import decode_jwt
 from utils.r2_client import r2_client
 from utils.llm_utils import get_llm
 from utils.liveportrait_utils import generate_blinking_animation_from_urls
+from utils.blinking_video_processor import process_blinking_video_for_avatar
 from db.config import get_supabase_client
 from io import BytesIO
 from langchain_core.messages import HumanMessage
@@ -163,6 +165,8 @@ async def create_avatar(
             "theme_color": request.theme_color or None,
             "active": True,
             "created_by": user_id,
+            "training_status": "pending",  # Set to pending for custom avatars
+            "blinking_video_url": None,  # Will be set after processing
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": time.strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -174,6 +178,13 @@ async def create_avatar(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create avatar"
             )
+        
+        avatar_id = res.data[0].get("id")
+        
+        # Trigger background processing for blinking video generation
+        # Only if avatar has an image URL
+        if request.image_url:
+            asyncio.create_task(process_blinking_video_for_avatar(avatar_id))
         
         return {"avatar": res.data[0]}
     except HTTPException:
@@ -217,6 +228,7 @@ async def update_avatar(
         
         # Build update data
         update_data = {"updated_at": time.strftime("%Y-%m-%d %H:%M:%S")}
+        image_url_changed = False
         if request.name is not None:
             update_data["name"] = request.name.strip()
         if request.role_title is not None:
@@ -224,7 +236,14 @@ async def update_avatar(
         if request.description is not None:
             update_data["description"] = request.description.strip() if request.description else None
         if request.image_url is not None:
+            # Check if image URL is actually changing
+            if check.data[0].get("image_url") != request.image_url:
+                image_url_changed = True
             update_data["image_url"] = request.image_url
+            # If image changed, reset blinking video and trigger regeneration
+            if image_url_changed:
+                update_data["blinking_video_url"] = None
+                update_data["training_status"] = "pending"
         if request.audio_url is not None:
             update_data["audio_url"] = request.audio_url
         if request.language is not None:
@@ -247,6 +266,10 @@ async def update_avatar(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to update avatar"
             )
+        
+        # If image URL changed, trigger background processing for blinking video regeneration
+        if image_url_changed and request.image_url:
+            asyncio.create_task(process_blinking_video_for_avatar(avatar_id))
         
         return {"avatar": res.data[0]}
     except HTTPException:
@@ -428,7 +451,7 @@ Generate only the prompt text, no additional explanation:"""
 
 @avatar_router.get("/{avatar_id}/blinking-animation")
 async def get_blinking_animation(avatar_id: str):
-    """Generate and return blinking animation video for avatar using LivePortrait"""
+    """Get blinking animation video for avatar - returns stored URL if available, otherwise generates on-the-fly"""
     try:
         # Get avatar details
         avatars = _get_avatars_table()
@@ -441,6 +464,12 @@ async def get_blinking_animation(avatar_id: str):
             )
         
         avatar = res.data[0]
+        
+        # If avatar has a stored blinking video URL, redirect to it
+        if avatar.get("blinking_video_url"):
+            return RedirectResponse(url=avatar.get("blinking_video_url"), status_code=302)
+        
+        # Fallback: Generate on-the-fly (for backward compatibility or if processing failed)
         avatar_image_url = avatar.get("image_url")
         
         if not avatar_image_url:

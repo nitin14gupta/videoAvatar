@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiService } from "@/src/api/apiService";
 import { useToast } from "@/src/context/ToastContext";
+import ImageCropModal from "./ImageCropModal";
 
 interface CreateAvatarModalProps {
     isOpen: boolean;
@@ -27,6 +28,8 @@ export default function CreateAvatarModal({ isOpen, onClose, onSuccess }: Create
     const [audioFile, setAudioFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [audioDuration, setAudioDuration] = useState<number | null>(null);
+    const [showCropModal, setShowCropModal] = useState(false);
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
     const imageInputRef = useRef<HTMLInputElement>(null);
     const audioInputRef = useRef<HTMLInputElement>(null);
@@ -34,22 +37,37 @@ export default function CreateAvatarModal({ isOpen, onClose, onSuccess }: Create
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Validate image dimensions (1:1 aspect ratio)
-            const img = new Image();
-            img.onload = () => {
-                if (img.width === img.height) {
-                    setImageFile(file);
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        setImagePreview(reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    showError("Image Error", "Please upload a square image (1:1 aspect ratio)");
-                }
+            // Check if it's an image file
+            if (!file.type.startsWith("image/")) {
+                showError("Image Error", "Please select an image file");
+                return;
+            }
+
+            // Read the file and show crop modal
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const imageUrl = reader.result as string;
+                setImageToCrop(imageUrl);
+                setShowCropModal(true);
             };
-            img.src = URL.createObjectURL(file);
+            reader.readAsDataURL(file);
         }
+    };
+
+    const handleCropComplete = (croppedImageBlob: Blob) => {
+        // Create a File from the blob
+        const croppedFile = new File([croppedImageBlob], "cropped-avatar.jpg", {
+            type: "image/jpeg",
+        });
+        
+        setImageFile(croppedFile);
+        
+        // Create preview URL
+        const previewUrl = URL.createObjectURL(croppedImageBlob);
+        setImagePreview(previewUrl);
+        
+        setShowCropModal(false);
+        setImageToCrop(null);
     };
 
     const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,6 +164,12 @@ export default function CreateAvatarModal({ isOpen, onClose, onSuccess }: Create
         setAudioFile(null);
         setImagePreview(null);
         setAudioDuration(null);
+        setShowCropModal(false);
+        setImageToCrop(null);
+        // Clean up object URLs
+        if (imagePreview) {
+            URL.revokeObjectURL(imagePreview);
+        }
         onClose();
     };
 
@@ -178,7 +202,7 @@ export default function CreateAvatarModal({ isOpen, onClose, onSuccess }: Create
                         {/* Image Upload */}
                         <div>
                             <label className="block text-sm font-semibold text-white mb-2" style={{ fontFamily: 'var(--font-inter)' }}>
-                                Avatar Image (1:1 Square) *
+                                Avatar Image (will be cropped to 1:1) *
                             </label>
                             <div className="flex items-center gap-4">
                                 {imagePreview ? (
@@ -385,6 +409,23 @@ export default function CreateAvatarModal({ isOpen, onClose, onSuccess }: Create
                     </form>
                 </motion.div>
             </div>
+
+            {/* Image Crop Modal */}
+            {showCropModal && imageToCrop && (
+                <ImageCropModal
+                    isOpen={showCropModal}
+                    imageSrc={imageToCrop}
+                    onClose={() => {
+                        setShowCropModal(false);
+                        setImageToCrop(null);
+                        // Reset file input
+                        if (imageInputRef.current) {
+                            imageInputRef.current.value = "";
+                        }
+                    }}
+                    onCropComplete={handleCropComplete}
+                />
+            )}
         </AnimatePresence>
     );
 }

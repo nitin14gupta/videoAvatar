@@ -89,11 +89,13 @@ export default function SessionPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [playingAudio, setPlayingAudio] = useState<string | null>(null);
     const [isInitializing, setIsInitializing] = useState(false);
+    const [blinkingAnimationUrl, setBlinkingAnimationUrl] = useState<string | null>(null);
     const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
     const audioQueueRef = useRef<Array<{ url: string; audio: HTMLAudioElement }>>([]);
     const isPlayingQueueRef = useRef(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
+    const avatarVideoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const speechRecognitionRef = useRef<SpeechRecognitionInterface | null>(null);
     const conversationWebSocketRef = useRef<WebSocket | null>(null);
@@ -128,6 +130,10 @@ export default function SessionPage() {
                 // Fetch avatar details
                 const res = await apiService.getAvatarById(avatarId);
                 setAvatar(res.avatar);
+                
+                // Get blinking animation URL
+                const animationUrl = apiService.getBlinkingAnimationUrl(avatarId);
+                setBlinkingAnimationUrl(animationUrl);
             } catch (error) {
                 console.error("Failed to initialize:", error);
                 showError("Error", "Failed to load session");
@@ -561,14 +567,32 @@ export default function SessionPage() {
                             </p>
                         </div>
 
-                        {/* Avatar Image */}
+                        {/* Avatar with Blinking Animation */}
                         <div className="relative w-full aspect-square bg-[#101621] rounded-lg overflow-hidden mb-4">
+                            {blinkingAnimationUrl ? (
+                                <video
+                                    ref={avatarVideoRef}
+                                    src={blinkingAnimationUrl}
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    className="w-full h-full object-cover"
+                                    onLoadedData={() => {
+                                        // Ensure video plays
+                                        if (avatarVideoRef.current) {
+                                            avatarVideoRef.current.play().catch(console.error);
+                                        }
+                                    }}
+                                />
+                            ) : (
                             <Image
                                 src={avatar.image_url}
                                 alt={avatar.name}
                                 fill
                                 className="object-cover"
                             />
+                            )}
                         </div>
 
                         {/* Conversation Messages */}

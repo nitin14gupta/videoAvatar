@@ -110,6 +110,11 @@ class ApiService {
         return this.request<{ avatar: Avatar }>(API_CONFIG.ENDPOINTS.AVATARS.GET_BY_ID(id));
     }
 
+    getBlinkingAnimationUrl(avatarId: string): string {
+        // Return URL to blinking animation endpoint
+        return `${this.baseURL}${API_CONFIG.ENDPOINTS.AVATARS.BLINKING_ANIMATION(avatarId)}`;
+    }
+
     createAvatar(data: AvatarCreateRequest) {
         return this.request<{ avatar: Avatar }>(API_CONFIG.ENDPOINTS.AVATARS.CREATE, {
             method: 'POST',

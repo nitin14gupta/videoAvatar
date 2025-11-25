@@ -25,6 +25,7 @@ export const API_CONFIG = {
             UPLOAD_IMAGE: '/avatars/upload-image',
             UPLOAD_AUDIO: '/avatars/upload-audio',
             GENERATE_PROMPT: '/avatars/generate-prompt',
+            BLINKING_ANIMATION: (id: string) => `/avatars/${id}/blinking-animation`,
         },
         CONVERSATIONS: {
             CHAT: '/conversations/chat',

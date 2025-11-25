@@ -1,11 +1,13 @@
 import os
 import time
 from fastapi import APIRouter, HTTPException, status, Depends, Header, UploadFile, File
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from utils.auth_utils import decode_jwt
 from utils.r2_client import r2_client
 from utils.llm_utils import get_llm
+from utils.liveportrait_utils import generate_blinking_animation_from_urls
 from db.config import get_supabase_client
 from io import BytesIO
 from langchain_core.messages import HumanMessage
@@ -421,5 +423,74 @@ Generate only the prompt text, no additional explanation:"""
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate prompt: {str(e)}"
+        )
+
+
+@avatar_router.get("/{avatar_id}/blinking-animation")
+async def get_blinking_animation(avatar_id: str):
+    """Generate and return blinking animation video for avatar using LivePortrait"""
+    try:
+        # Get avatar details
+        avatars = _get_avatars_table()
+        res = avatars.select("*").eq("id", avatar_id).limit(1).execute()
+        
+        if not res.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Avatar not found"
+            )
+        
+        avatar = res.data[0]
+        avatar_image_url = avatar.get("image_url")
+        
+        if not avatar_image_url:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Avatar has no image URL"
+            )
+        
+        # Path to blinking video
+        blinking_video_path = os.path.join(os.path.dirname(__file__), "..", "static", "blinking.mp4")
+        
+        if not os.path.exists(blinking_video_path):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Blinking video not found"
+            )
+        
+        # Generate blinking animation
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        output_path = os.path.join(temp_dir, f"blinking_animation_{avatar_id}_{os.getpid()}.mp4")
+        
+        result_path = generate_blinking_animation_from_urls(
+            avatar_image_url=avatar_image_url,
+            blinking_video_path=blinking_video_path,
+            output_path=output_path
+        )
+        
+        if not result_path or not os.path.exists(result_path):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to generate blinking animation"
+            )
+        
+        # Return video file
+        return FileResponse(
+            result_path,
+            media_type="video/mp4",
+            filename=f"blinking_animation_{avatar_id}.mp4",
+            headers={
+                "Cache-Control": "no-cache",
+                "Content-Disposition": f"inline; filename=blinking_animation_{avatar_id}.mp4"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate blinking animation: {str(e)}"
         )
 

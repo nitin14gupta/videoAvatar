@@ -3,6 +3,7 @@ import logging
 import asyncio
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from routes.auth_routes import auth_router
@@ -26,7 +27,7 @@ _initialization_status = {
 }
 
 def initialize_services():
-    """Initialize TTS and LLM on server startup (Speech recognition is handled client-side with Web Speech API)"""
+    """Initialize TTS, LLM, and LivePortrait on server startup (Speech recognition is handled client-side with Web Speech API)"""
     global _initialization_status
     
     _initialization_status["initializing"] = True
@@ -41,6 +42,7 @@ def initialize_services():
         logger.info("✓ TTS initialized successfully")
     except Exception as e:
         logger.error(f"✗ TTS initialization failed: {e}")
+        logger.error(f"TTS error details: {type(e).__name__}: {str(e)}")
         _initialization_status["tts"] = False
     
     try:
@@ -53,6 +55,18 @@ def initialize_services():
     except Exception as e:
         logger.error(f"✗ LLM initialization failed: {e}")
         _initialization_status["llm"] = False
+    
+    try:
+        # Initialize LivePortrait (verify it's accessible)
+        logger.info("Initializing LivePortrait...")
+        from utils.liveportrait_utils import get_liveportrait_path
+        liveportrait_path = get_liveportrait_path()
+        if liveportrait_path:
+            logger.info(f"✓ LivePortrait found at: {liveportrait_path}")
+        else:
+            logger.warning("⚠ LivePortrait repository not found - blinking animations may not work")
+    except Exception as e:
+        logger.warning(f"⚠ LivePortrait check failed: {e}")
     
     _initialization_status["initializing"] = False
     logger.info("Service initialization complete!")
@@ -92,6 +106,11 @@ def create_app() -> FastAPI:
     app.include_router(auth_router, prefix="/auth", tags=["auth"])
     app.include_router(avatar_router, prefix="/avatars", tags=["avatars"])
     app.include_router(conversation_router, prefix="/conversations", tags=["conversations"])
+    
+    # Serve static files (blinking.mp4, etc.)
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    if os.path.exists(static_dir):
+        app.mount("/static", StaticFiles(directory=static_dir), name="static")
     
     # Initialize services on startup
     @app.on_event("startup")

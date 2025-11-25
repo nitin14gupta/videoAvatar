@@ -14,13 +14,14 @@ python-multipart
 requests
 langchain-openai
 langchain-core
-faster-whisper 
 websockets 
 soundfile 
-numpy 
+numpy>=1.24.0,<2.0.0
+pandas>=2.0.0
 torch
 librosa 
 TTS
 transformers<4.36.0
 hf_xet
 gradio
+opencv-python

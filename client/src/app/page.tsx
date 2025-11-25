@@ -2,39 +2,367 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform, useInView, useAnimation } from "framer-motion";
+import {
+  DraggableCardBody,
+  DraggableCardContainer,
+} from "@/src/components/ui/draggable-card";
 import Image from "next/image";
 import Link from "next/link";
 import CustomCursor from "@/src/component/CustomCursor";
+import { HeroGeometric } from "@/src/components/ui/shape-landing-hero";
+import TestimonialCard, { Testimonial } from "@/src/components/ui/multi-media-testimonials";
+import { FeatureSteps } from "@/src/components/ui/features-section";
+import CurvedLoop from "@/src/component/CurvedLoop";
+import InfiniteMenu from "@/src/component/InfiniteMenu";
 
 export default function Home() {
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll();
 
-  // Parallax effects
-  const heroY = useTransform(scrollYProgress, [0, 0.5], [0, -100]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
+  const testimonials: Testimonial[] = [
+    {
+      name: "Alice Johnson",
+      profile: "https://github.com/shadcn.png",
+      title: "Improved Interview Workflow",
+      designation: "Software Engineer",
+      content:
+        "Ruvy transformed the way I manage my interviews. Highly recommended for professionals looking to save time!",
+    },
+    {
+      name: "Bob Smith",
+      profile: "https://github.com/shadcn.png",
+      title: "Simplicity at Its Best",
+      designation: "Product Manager",
+      content:
+        "The simplicity of this platform is unmatched. Perfect for small teams and startups.",
+      thumbnail: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/components-preview/popular/three-dwall-calendar-dark.jpg",
+    },
+    {
+      name: "Charlie Lee",
+      profile: "https://github.com/shadcn.png",
+      title: "Creative and Efficient Platform",
+      designation: "UX Designer",
+      content: "",
+      mediaUrl: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/crm(1)(1)(1).mp4",
+      thumbnail: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/dashboard-gradient.png",
+    },
+    {
+      type: "text",
+      name: "Diana Prince",
+      profile: "https://github.com/shadcn.png",
+      title: "Flawless Scheduling Experience",
+      designation: "Full Stack Developer",
+      content:
+        "The UI is sleek, intuitive, and makes scheduling interviews a breeze. 10/10 experience!",
+      rating: 5,
+    },
+    {
+      name: "Ethan Hunt",
+      profile: "https://github.com/shadcn.png",
+      title: "Streamlined Pipeline Management",
+      designation: "DevOps Engineer",
+      content:
+        "Managing my pipelines has never been easier thanks to this platform. Excellent UX!",
+    },
+    {
+      name: "Fiona Gallagher",
+      profile: "https://github.com/shadcn.png",
+      title: "Smooth and Intuitive Interface",
+      designation: "Frontend Developer",
+      content: "",
+      thumbnail: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/dashboard-gradient.png",
+    },
+    {
+      name: "George Martin",
+      profile: "https://github.com/shadcn.png",
+      title: "Visually Stunning Design",
+      designation: "Backend Developer",
+      content: "",
+      mediaUrl: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/crm(1)(1)(1).mp4",
+      thumbnail: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/dashboard-gradient.png",
+    },
+    {
+      name: "Hannah Lee",
+      profile: "https://github.com/shadcn.png",
+      title: "Efficient Testing Workflow",
+      designation: "QA Engineer",
+      content:
+        "Testing has become more efficient with the tools provided here. Very intuitive and well-designed.",
+    },
+    {
+      type: "text",
+      name: "Ian Wright",
+      profile: "https://github.com/shadcn.png",
+      title: "Time-Saving Integration",
+      designation: "Data Scientist",
+      content:
+        "I can now schedule interviews without leaving my workspace. Saves so much time!",
+    },
+    {
+      name: "Jane Doe",
+      profile: "https://github.com/shadcn.png",
+      title: "Clean Visual Presentation",
+      designation: "AI Researcher",
+      content: "",
+      thumbnail: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/components-preview/popular/ripple-distortion-dark.png",
+    },
+    {
+      name: "Kyle Brown",
+      profile: "https://github.com/shadcn.png",
+      title: "Smooth Playback Experience",
+      designation: "UI Designer",
+      content: "",
+      mediaUrl: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/crm(1)(1)(1).mp4",
+      thumbnail: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/dashboard-gradient.png",
+    },
+    {
+      name: "Laura Kim",
+      profile: "https://github.com/shadcn.png",
+      title: "Simple Yet Powerful",
+      designation: "Full Stack Developer",
+      content:
+        "The simplicity of this platform is unmatched. Perfect for small teams and startups.",
+    },
+    {
+      name: "Michael Scott",
+      profile: "https://github.com/shadcn.png",
+      title: "Organized Interview Management",
+      designation: "Project Manager",
+      content:
+        "I can track and organize interviews effortlessly. Love the clean UI and responsiveness.",
+    },
+    {
+      name: "Nina Patel",
+      profile: "https://github.com/shadcn.png",
+      title: "Elegant Visual Experience",
+      designation: "Mobile Developer",
+      content: "",
+      mediaUrl: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/crm(1)(1)(1).mp4",
+      thumbnail: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/dashboard-gradient.png",
+    },
+    {
+      name: "Oscar Wilde",
+      profile: "https://github.com/shadcn.png",
+      title: "Impressive User Flow",
+      designation: "Content Strategist",
+      content: "",
+      mediaUrl: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/crm(1)(1)(1).mp4",
+      thumbnail: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/dashboard-gradient.png",
+    },
+    {
+      name: "Pam Beesly",
+      profile: "https://github.com/shadcn.png",
+      title: "Showcasing Client Feedback",
+      designation: "Graphic Designer",
+      content:
+        "Love the clean testimonial cards and how easy it is to showcase our client feedback.",
+    },
+    {
+      name: "Quentin Tarantino",
+      profile: "https://github.com/shadcn.png",
+      title: "Perfect for Creative Professionals",
+      designation: "Video Editor",
+      content: "",
+      thumbnail: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/components-preview/popular/tag-cloud-select-dark.jpg",
+    },
+    {
+      name: "Rachel Green",
+      profile: "https://github.com/shadcn.png",
+      title: "Enhanced Collaboration",
+      designation: "Marketing Specialist",
+      content: "",
+      mediaUrl: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/crm(1)(1)(1).mp4",
+      thumbnail: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/dashboard-gradient.png",
+    },
+    {
+      name: "Steve Rogers",
+      profile: "https://github.com/shadcn.png",
+      title: "Streamlined Recruitment Process",
+      designation: "Team Lead",
+      content:
+        "This platform streamlines our recruitment process like never before. Highly efficient!",
+    },
+    {
+      name: "Tina Fey",
+      profile: "https://github.com/shadcn.png",
+      title: "Beautifully Designed Platform",
+      designation: "Copywriter",
+      content:
+        "Beautifully designed, intuitive, and extremely user-friendly. Can't recommend enough!",
+    },
+  ];
+
+  const features = [
+    {
+      step: 'Step 1',
+      title: 'Learn the Basics',
+      content: 'Start your Web3 journey by learning the basics of blockchain.',
+      image: 'https://images.unsplash.com/photo-1723958929247-ef054b525153?q=80&w=2070&auto=format&fit=crop'
+    },
+    {
+      step: 'Step 2',
+      title: 'Deep Dive',
+      content: 'Dive deep into blockchain fundamentals and smart contract development.',
+      image: 'https://images.unsplash.com/photo-1723931464622-b7df7c71e380?q=80&w=2070&auto=format&fit=crop'
+    },
+    {
+      step: 'Step 3',
+      title: 'Build Projects',
+      content: 'Graduate with hands-on Web3 experience through building decentralized applications.',
+      image: 'https://images.unsplash.com/photo-1725961476494-efa87ae3106a?q=80&w=2070&auto=format&fit=crop'
+    },
+  ]
+
+  const items = [
+    {
+      title: "Tyler Durden",
+      image:
+        "https://images.unsplash.com/photo-1732310216648-603c0255c000?q=80&w=3540&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      className: "absolute top-10 left-[20%] rotate-[-5deg]",
+    },
+    {
+      title: "The Narrator",
+      image:
+        "https://images.unsplash.com/photo-1697909623564-3dae17f6c20b?q=80&w=2667&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      className: "absolute top-40 left-[25%] rotate-[-7deg]",
+    },
+    {
+      title: "Iceland",
+      image:
+        "https://images.unsplash.com/photo-1501854140801-50d01698950b?q=80&w=2600&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      className: "absolute top-5 left-[40%] rotate-[8deg]",
+    },
+    {
+      title: "Japan",
+      image:
+        "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?q=80&w=3648&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      className: "absolute top-32 left-[55%] rotate-[10deg]",
+    },
+    {
+      title: "Norway",
+      image:
+        "https://images.unsplash.com/photo-1421789665209-c9b2a435e3dc?q=80&w=3542&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      className: "absolute top-20 right-[35%] rotate-[2deg]",
+    },
+    {
+      title: "New Zealand",
+      image:
+        "https://images.unsplash.com/photo-1505142468610-359e7d316be0?q=80&w=3070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      className: "absolute top-24 left-[45%] rotate-[-7deg]",
+    },
+    {
+      title: "Canada",
+      image:
+        "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=2560&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      className: "absolute top-8 left-[30%] rotate-[4deg]",
+    },
+  ];
+
+  const menuItems = [
+    {
+      image: 'https://picsum.photos/300/300?grayscale',
+      link: 'https://google.com/',
+      title: 'Item 1',
+      description: 'This is pretty cool, right?'
+    },
+    {
+      image: 'https://picsum.photos/400/400?grayscale',
+      link: 'https://google.com/',
+      title: 'Item 2',
+      description: 'This is pretty cool, right?'
+    },
+    {
+      image: 'https://picsum.photos/500/500?grayscale',
+      link: 'https://google.com/',
+      title: 'Item 3',
+      description: 'This is pretty cool, right?'
+    },
+    {
+      image: 'https://picsum.photos/600/600?grayscale',
+      link: 'https://google.com/',
+      title: 'Item 4',
+      description: 'This is pretty cool, right?'
+    }
+  ];
+
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#101621]">
+    <div className="relative min-h-screen overflow-hidden bg-[#030303]">
       <CustomCursor />
 
       {/* Navigation */}
       <NavBar />
 
       {/* Hero Section */}
-      <HeroSection heroY={heroY} heroOpacity={heroOpacity} />
+      <HeroGeometric
+        badge="AI Avatar Platform"
+        title1="Living Neural"
+        title2="Tech Experience"
+      />
+      <InfiniteMenu items={menuItems} />
 
       {/* Features Section */}
-      <FeaturesSection />
+      {/* <FeaturesSection /> */}
+      <FeatureSteps
+        features={features}
+        title="Your Journey Starts Here"
+        autoPlayInterval={4000}
+        imageHeight="h-[500px]"
+      />
 
       {/* Demo/Upload Section */}
-      <DemoSection />
+      <div className="relative flex min-h-screen w-full items-center justify-center overflow-clip">
+        <DemoSection />
+        <CurvedLoop
+          marqueeText="Be ✦ Creative ✦ With ✦ Video ✦ Avatar ✦"
+          speed={3}
+          curveAmount={500}
+          direction="right"
+          interactive={true}
+          className="custom-text-style"
+        />
+      </div>
 
       {/* Avatar Gallery */}
-      <AvatarGallery />
+      {/* <AvatarGallery /> */}
+      <DraggableCardContainer className="relative flex min-h-screen w-full items-center justify-center overflow-clip">
+        <p className="absolute top-1/2 mx-auto max-w-sm -translate-y-3/4 text-center text-2xl font-black text-neutral-400 md:text-4xl dark:text-neutral-800">
+          If its your first day at Fight Club, you have to fight.
+        </p>
+        {items.map((item) => (
+          <DraggableCardBody className={item.className}>
+            <img
+              src={item.image}
+              alt={item.title}
+              className="pointer-events-none relative z-10 h-80 w-80 object-cover"
+            />
+            <h3 className="mt-4 text-center text-2xl font-bold text-neutral-700 dark:text-neutral-300">
+              {item.title}
+            </h3>
+          </DraggableCardBody>
+        ))}
+      </DraggableCardContainer>
 
       {/* Testimonials */}
-      <TestimonialsSection />
+      {/* <TestimonialsSection /> */}
+      <section className="px-6 py-16">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-center text-4xl font-bold mb-12 text-foreground">
+            Our clients love working with us because we go beyond great design to
+            deliver real results.
+          </h2>
+
+          {Array.isArray(testimonials) && testimonials.length > 0 ? (
+            <div className="columns-1 sm:columns-2 lg:columns-3 gap-3 [column-fill:_balance]">
+              {testimonials.map((t, i) => (
+                <TestimonialCard key={i} testimonial={t} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground">
+              No testimonials yet.
+            </p>
+          )}
+        </div>
+      </section>
 
       {/* CTA Section */}
       <CTASection />
@@ -59,13 +387,19 @@ function NavBar() {
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className={`fixed top-0 w-full z-40 transition-all duration-300 ${scrolled ? "bg-[#101621]/80 backdrop-blur-md" : "bg-transparent"
+      className={`fixed top-0 w-full z-40 transition-all duration-300 ${scrolled ? "bg-[#030303]/80 backdrop-blur-md border-b border-white/[0.08]" : "bg-transparent"
         }`}
     >
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
         <motion.div
-          className="text-2xl font-bold gradient-text"
-          style={{ fontFamily: 'var(--font-orbitron)' }}
+          className="text-2xl font-bold"
+          style={{
+            fontFamily: 'var(--font-orbitron)',
+            background: 'linear-gradient(135deg, #4e99ff, #be65ff)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}
           whileHover={{ scale: 1.05 }}
         >
           VideoAvatar
@@ -75,7 +409,7 @@ function NavBar() {
             <motion.a
               key={item}
               href={`#${item.toLowerCase()}`}
-              className="text-[#c3d3e2] hover:text-[#0fffc3] transition-colors"
+              className="text-white/60 hover:text-[#0fffc3] transition-colors text-sm tracking-wide"
               style={{ fontFamily: 'var(--font-inter)' }}
               whileHover={{ scale: 1.1 }}
             >
@@ -84,7 +418,7 @@ function NavBar() {
           ))}
           <Link href="/Login">
             <motion.button
-              className="px-6 py-2 bg-gradient-to-r from-[#4e99ff] to-[#be65ff] rounded-full text-white font-semibold"
+              className="px-6 py-2.5 bg-gradient-to-r from-[#4e99ff] to-[#be65ff] rounded-full text-white text-sm font-medium tracking-wide"
               style={{ fontFamily: 'var(--font-inter)' }}
               whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(78, 153, 255, 0.6)" }}
               whileTap={{ scale: 0.95 }}
@@ -98,222 +432,6 @@ function NavBar() {
   );
 }
 
-// Hero Section
-function HeroSection({ heroY, heroOpacity }: { heroY: any; heroOpacity: any }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(containerRef, { once: true, amount: 0.3 });
-
-  return (
-    <motion.section
-      ref={containerRef}
-      style={{ y: heroY, opacity: heroOpacity }}
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
-    >
-      {/* Animated Background Particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(20)].map((_, i) => {
-          const width = typeof window !== 'undefined' ? window.innerWidth : 1920;
-          const height = typeof window !== 'undefined' ? window.innerHeight : 1080;
-          return (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 rounded-full bg-[#abe6ff]"
-              initial={{
-                x: Math.random() * width,
-                y: Math.random() * height,
-                opacity: 0,
-              }}
-              animate={{
-                y: [null, Math.random() * height],
-                x: [null, Math.random() * width],
-                opacity: [0, 0.8, 0],
-              }}
-              transition={{
-                duration: 5 + Math.random() * 5,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-            />
-          );
-        })}
-      </div>
-
-      {/* Neural Wave Glow Effect */}
-      <motion.div
-        className="absolute inset-0 flex items-center justify-center"
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.6, 0.3],
-        }}
-        transition={{
-          duration: 4,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      >
-        <div className="w-[600px] h-[600px] rounded-full bg-gradient-to-r from-[#4e99ff]/20 to-[#be65ff]/20 blur-3xl" />
-      </motion.div>
-
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          {/* Text Content */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={isInView ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 0.8 }}
-          >
-            <motion.h1
-              className="text-6xl md:text-8xl font-bold mb-6 leading-tight"
-              style={{ fontFamily: 'var(--font-orbitron)' }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: 0.2 }}
-            >
-              <span className="gradient-text block">Living</span>
-              <span className="text-white block">Neural</span>
-              <span className="gradient-text-mint block">Tech</span>
-            </motion.h1>
-            <motion.p
-              className="text-xl text-[#c3d3e2] mb-8 leading-relaxed"
-              style={{ fontFamily: 'var(--font-inter)' }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: 0.4 }}
-            >
-              Experience the future of AI avatars. Create conversational, lifelike digital beings
-              powered by neural networks and real-time interaction.
-            </motion.p>
-            <motion.div
-              className="flex gap-4 flex-wrap"
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: 0.6 }}
-            >
-              <Link href="/Login">
-                <motion.button
-                  className="px-8 py-4 bg-gradient-to-r from-[#0fffc3] to-[#4e99ff] rounded-full text-[#101621] font-bold text-lg"
-                  style={{
-                    fontFamily: 'var(--font-inter)',
-                    boxShadow: "0 0 20px rgba(15, 255, 195, 0.5), 0 0 40px rgba(15, 255, 195, 0.3)"
-                  }}
-                  whileHover={{ scale: 1.05, boxShadow: "0 0 40px rgba(15, 255, 195, 0.8)" }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Try Your Avatar
-                </motion.button>
-              </Link>
-              <motion.button
-                className="px-8 py-4 border-2 border-[#4e99ff] rounded-full text-white font-semibold text-lg"
-                style={{ fontFamily: 'var(--font-inter)' }}
-                whileHover={{ scale: 1.05, borderColor: "#0fffc3", boxShadow: "0 0 30px rgba(78, 153, 255, 0.5)" }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Watch Demo
-              </motion.button>
-            </motion.div>
-          </motion.div>
-
-          {/* Avatar Image */}
-          <motion.div
-            className="relative"
-            initial={{ opacity: 0, x: 50 }}
-            animate={isInView ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.3 }}
-          >
-            <motion.div
-              className="relative w-full max-w-md mx-auto"
-              animate={{
-                y: [0, -20, 0],
-              }}
-              transition={{
-                duration: 6,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            >
-              {/* Neural Wave Lines - Outer Violet Border */}
-              <motion.div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  border: "3px solid #be65ff",
-                  boxShadow: "0 0 30px rgba(190, 101, 255, 0.5)",
-                }}
-                animate={{
-                  scale: [1, 1.15, 1],
-                  opacity: [0.4, 0.7, 0.4],
-                  rotate: [0, 360],
-                }}
-                transition={{
-                  duration: 6,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              />
-
-              {/* Neural Wave Lines - Middle Azure Border */}
-              <motion.div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  border: "2px solid #4e99ff",
-                  margin: "8px",
-                  boxShadow: "0 0 20px rgba(78, 153, 255, 0.4)",
-                }}
-                animate={{
-                  scale: [1, 1.1, 1],
-                  opacity: [0.5, 0.8, 0.5],
-                  rotate: [360, 0],
-                }}
-                transition={{
-                  duration: 5,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-              />
-
-              {/* Avatar Image with Inner Mint Border */}
-              <div className="relative z-10 rounded-full overflow-hidden" style={{
-                border: "2px solid #0fffc3",
-                boxShadow: "0 0 40px rgba(15, 255, 195, 0.6), inset 0 0 20px rgba(15, 255, 195, 0.2)",
-                margin: "20px",
-              }}>
-                <Image
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=500&h=500&fit=crop"
-                  alt="AI Avatar"
-                  width={500}
-                  height={500}
-                  className="w-full h-auto object-cover rounded-full"
-                />
-              </div>
-
-              {/* Floating Particles */}
-              {[...Array(8)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-2 h-2 rounded-full bg-[#abe6ff]"
-                  style={{
-                    top: `${20 + i * 10}%`,
-                    left: `${10 + i * 12}%`,
-                  }}
-                  animate={{
-                    y: [0, -30, 0],
-                    x: [0, 20, 0],
-                    opacity: [0.3, 1, 0.3],
-                    scale: [1, 1.5, 1],
-                  }}
-                  transition={{
-                    duration: 3 + Math.random() * 2,
-                    repeat: Infinity,
-                    delay: i * 0.3,
-                  }}
-                />
-              ))}
-            </motion.div>
-          </motion.div>
-        </div>
-      </div>
-    </motion.section>
-  );
-}
 
 // Features Section
 function FeaturesSection() {
@@ -348,68 +466,50 @@ function FeaturesSection() {
   ];
 
   return (
-    <section id="features" ref={ref} className="py-32 relative">
-      {/* Section Divider */}
-      <motion.div
-        className="h-px w-full bg-gradient-to-r from-transparent via-[#4e99ff] to-transparent mb-20"
-        initial={{ scaleX: 0 }}
-        animate={isInView ? { scaleX: 1 } : {}}
-        transition={{ duration: 1 }}
-      />
+    <section id="features" ref={ref} className="py-32 relative bg-[#030303]">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#4e99ff]/[0.03] via-transparent to-[#be65ff]/[0.03] blur-3xl" />
 
-      <div className="container mx-auto px-6">
+      <div className="container mx-auto px-6 relative z-10">
         <motion.div
           className="text-center mb-20"
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8 }}
         >
-          <h2 className="text-5xl md:text-6xl font-bold font-[var(--font-orbitron)] mb-4 gradient-text">
-            Powerful Features
+          <h2 className="text-5xl md:text-6xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4e99ff] to-[#0fffc3]">
+              Powerful Features
+            </span>
           </h2>
-          <p className="text-xl text-[#c3d3e2] font-[var(--font-inter)] max-w-2xl mx-auto">
+          <p className="text-lg text-white/40 font-light tracking-wide max-w-2xl mx-auto" style={{ fontFamily: 'var(--font-inter)' }}>
             Cutting-edge technology meets intuitive design
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
             <motion.div
               key={feature.title}
-              className="glass-card rounded-2xl p-8 relative overflow-hidden group"
+              className="rounded-2xl p-8 relative overflow-hidden group border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm"
               initial={{ opacity: 0, y: 50 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6, delay: index * 0.1 }}
-              whileHover={{ y: -10, scale: 1.02 }}
+              whileHover={{ y: -8, borderColor: "rgba(78, 153, 255, 0.3)" }}
             >
               {/* Gradient Background on Hover */}
               <motion.div
-                className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}
+                className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}
               />
 
               <div className="relative z-10">
-                <div className="text-5xl mb-4">{feature.icon}</div>
-                <h3 className="text-2xl font-bold font-[var(--font-orbitron)] mb-3 text-white">
+                <div className="text-4xl mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-bold mb-3 text-white tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
                   {feature.title}
                 </h3>
-                <p className="text-[#c3d3e2] font-[var(--font-inter)] leading-relaxed">
+                <p className="text-white/40 text-sm leading-relaxed font-light tracking-wide" style={{ fontFamily: 'var(--font-inter)' }}>
                   {feature.description}
                 </p>
               </div>
-
-              {/* Glow Effect */}
-              <motion.div
-                className={`absolute -bottom-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br ${feature.gradient} opacity-20 blur-2xl`}
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.2, 0.4, 0.2],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  delay: index * 0.5,
-                }}
-              />
             </motion.div>
           ))}
         </div>
@@ -425,18 +525,22 @@ function DemoSection() {
   const [isDragging, setIsDragging] = useState(false);
 
   return (
-    <section id="demo" ref={ref} className="py-32 relative">
-      <div className="container mx-auto px-6">
+    <section id="demo" ref={ref} className="py-32 relative bg-[#030303]">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0fffc3]/[0.02] via-transparent to-[#4e99ff]/[0.02] blur-3xl" />
+
+      <div className="container mx-auto px-6 relative z-10">
         <motion.div
           className="text-center mb-20"
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8 }}
         >
-          <h2 className="text-5xl md:text-6xl font-bold font-[var(--font-orbitron)] mb-4 gradient-text-mint">
-            Try It Now
+          <h2 className="text-5xl md:text-6xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#0fffc3] to-[#4e99ff]">
+              Try It Now
+            </span>
           </h2>
-          <p className="text-xl text-[#c3d3e2] font-[var(--font-inter)] max-w-2xl mx-auto">
+          <p className="text-lg text-white/40 font-light tracking-wide max-w-2xl mx-auto" style={{ fontFamily: 'var(--font-inter)' }}>
             Upload your content and watch the magic happen
           </p>
         </motion.div>
@@ -448,9 +552,9 @@ function DemoSection() {
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           <motion.div
-            className={`glass-card rounded-3xl p-12 border-2 border-dashed transition-all duration-300 ${isDragging
-              ? "border-[#0fffc3] bg-[#0fffc3]/10 scale-105"
-              : "border-[#4e99ff]/50 hover:border-[#4e99ff]"
+            className={`rounded-3xl p-12 border border-dashed transition-all duration-300 bg-white/[0.02] backdrop-blur-sm ${isDragging
+              ? "border-[#0fffc3] bg-[#0fffc3]/5 scale-105"
+              : "border-white/[0.15] hover:border-[#4e99ff]/50"
               }`}
             onDragOver={(e) => {
               e.preventDefault();
@@ -461,25 +565,26 @@ function DemoSection() {
               e.preventDefault();
               setIsDragging(false);
             }}
-            whileHover={{ scale: 1.02 }}
-            animate={isDragging ? { scale: 1.05 } : {}}
+            whileHover={{ scale: 1.01 }}
+            animate={isDragging ? { scale: 1.03 } : {}}
           >
             <div className="text-center">
               <motion.div
-                className="text-6xl mb-6"
+                className="text-5xl mb-6"
                 animate={isDragging ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
                 transition={{ duration: 0.5, repeat: Infinity }}
               >
                 📤
               </motion.div>
-              <h3 className="text-3xl font-bold font-[var(--font-orbitron)] mb-4 text-white">
+              <h3 className="text-2xl font-bold mb-4 text-white tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
                 Drag & Drop Your Content
               </h3>
-              <p className="text-[#c3d3e2] font-[var(--font-inter)] mb-8">
+              <p className="text-white/40 text-sm mb-8 font-light tracking-wide" style={{ fontFamily: 'var(--font-inter)' }}>
                 Upload images, videos, or audio files to create your AI avatar
               </p>
               <motion.button
-                className="px-8 py-4 bg-gradient-to-r from-[#4e99ff] to-[#be65ff] rounded-full text-white font-[var(--font-inter)] font-semibold text-lg"
+                className="px-8 py-3.5 bg-gradient-to-r from-[#4e99ff] to-[#be65ff] rounded-full text-white text-sm font-medium tracking-wide"
+                style={{ fontFamily: 'var(--font-inter)' }}
                 whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(78, 153, 255, 0.6)" }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -509,24 +614,28 @@ function AvatarGallery() {
   ];
 
   return (
-    <section id="gallery" ref={ref} className="py-32 relative overflow-hidden">
-      <div className="container mx-auto px-6">
+    <section id="gallery" ref={ref} className="py-32 relative overflow-hidden bg-[#030303]">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#be65ff]/[0.03] via-transparent to-[#4e99ff]/[0.03] blur-3xl" />
+
+      <div className="container mx-auto px-6 relative z-10">
         <motion.div
           className="text-center mb-20"
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8 }}
         >
-          <h2 className="text-5xl md:text-6xl font-bold font-[var(--font-orbitron)] mb-4 gradient-text">
-            Avatars in Action
+          <h2 className="text-5xl md:text-6xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4e99ff] to-[#be65ff]">
+              Avatars in Action
+            </span>
           </h2>
-          <p className="text-xl text-[#c3d3e2] font-[var(--font-inter)] max-w-2xl mx-auto">
+          <p className="text-lg text-white/40 font-light tracking-wide max-w-2xl mx-auto" style={{ fontFamily: 'var(--font-inter)' }}>
             See our AI avatars come to life
           </p>
         </motion.div>
 
         <div
-          className="flex gap-8 overflow-x-auto pb-8 scrollbar-hide"
+          className="flex gap-6 overflow-x-auto pb-8 scrollbar-hide"
           onMouseMove={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
@@ -536,29 +645,25 @@ function AvatarGallery() {
           {avatars.map((avatar, index) => (
             <motion.div
               key={index}
-              className="flex-shrink-0 w-80 h-80 rounded-2xl overflow-hidden glass-card group relative"
+              className="shrink-0 w-72 h-72 rounded-2xl overflow-hidden group relative border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm"
               initial={{ opacity: 0, x: 50 }}
               animate={isInView ? { opacity: 1, x: 0 } : {}}
               transition={{ duration: 0.6, delay: index * 0.1 }}
-              whileHover={{ scale: 1.05, zIndex: 10 }}
-              style={{
-                rotateY: typeof window !== 'undefined' ? `${(mousePos.x / window.innerWidth - 0.5) * 10}deg` : '0deg',
-                rotateX: typeof window !== 'undefined' ? `${(mousePos.y / window.innerHeight - 0.5) * -10}deg` : '0deg',
-              }}
+              whileHover={{ scale: 1.03, zIndex: 10, borderColor: "rgba(78, 153, 255, 0.3)" }}
             >
               <Image
                 src={avatar}
                 alt={`Avatar ${index + 1}`}
-                width={320}
-                height={320}
+                width={288}
+                height={288}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#101621]/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="absolute bottom-4 left-4 right-4">
-                  <h3 className="text-white font-[var(--font-orbitron)] font-bold text-xl mb-2">
+                  <h3 className="text-white font-bold text-lg mb-1 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
                     Avatar {index + 1}
                   </h3>
-                  <p className="text-[#c3d3e2] font-[var(--font-inter)] text-sm">
+                  <p className="text-white/40 text-xs font-light tracking-wide" style={{ fontFamily: 'var(--font-inter)' }}>
                     Interactive AI Character
                   </p>
                 </div>
@@ -598,38 +703,42 @@ function TestimonialsSection() {
   ];
 
   return (
-    <section id="testimonials" ref={ref} className="py-32 relative">
-      <div className="container mx-auto px-6">
+    <section id="testimonials" ref={ref} className="py-32 relative bg-[#030303]">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#4e99ff]/[0.02] via-transparent to-[#0fffc3]/[0.02] blur-3xl" />
+
+      <div className="container mx-auto px-6 relative z-10">
         <motion.div
           className="text-center mb-20"
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8 }}
         >
-          <h2 className="text-5xl md:text-6xl font-bold font-[var(--font-orbitron)] mb-4 gradient-text-mint">
-            Trusted by Innovators
+          <h2 className="text-5xl md:text-6xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#0fffc3] to-[#4e99ff]">
+              Trusted by Innovators
+            </span>
           </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-6">
           {testimonials.map((testimonial, index) => (
             <motion.div
               key={testimonial.name}
-              className="glass-card rounded-2xl p-8 relative"
+              className="rounded-2xl p-8 relative border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm"
               initial={{ opacity: 0, y: 50 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6, delay: index * 0.2 }}
-              whileHover={{ y: -10, scale: 1.02 }}
+              whileHover={{ y: -8, borderColor: "rgba(15, 255, 195, 0.3)" }}
             >
-              <div className="text-4xl mb-4">{testimonial.logo}</div>
-              <p className="text-[#c3d3e2] font-[var(--font-inter)] mb-6 leading-relaxed">
+              <div className="text-3xl mb-4">{testimonial.logo}</div>
+              <p className="text-white/40 font-light mb-6 leading-relaxed text-sm tracking-wide" style={{ fontFamily: 'var(--font-inter)' }}>
                 "{testimonial.content}"
               </p>
               <div>
-                <h4 className="text-white font-[var(--font-orbitron)] font-bold text-lg mb-1">
+                <h4 className="text-white font-bold text-base mb-1 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
                   {testimonial.name}
                 </h4>
-                <p className="text-[#4e99ff] font-[var(--font-inter)] text-sm">
+                <p className="text-[#4e99ff] text-xs font-light tracking-wide" style={{ fontFamily: 'var(--font-inter)' }}>
                   {testimonial.role}
                 </p>
               </div>
@@ -639,16 +748,17 @@ function TestimonialsSection() {
 
         {/* Brand Logos */}
         <motion.div
-          className="mt-20 flex flex-wrap justify-center items-center gap-12 opacity-60"
+          className="mt-20 flex flex-wrap justify-center items-center gap-12 opacity-40"
           initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 0.6 } : {}}
+          animate={isInView ? { opacity: 0.4 } : {}}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
           {["TechCorp", "InnovateLab", "DigitalStudio", "FutureTech", "NeuralAI"].map((brand, i) => (
             <motion.div
               key={brand}
-              className="text-2xl font-[var(--font-orbitron)] text-[#c3d3e2]"
-              whileHover={{ scale: 1.2, color: "#0fffc3" }}
+              className="text-xl text-white/30 font-medium tracking-wide"
+              style={{ fontFamily: 'var(--font-orbitron)' }}
+              whileHover={{ scale: 1.1, color: "#0fffc3" }}
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.8 + i * 0.1 }}
@@ -669,38 +779,31 @@ function CTASection() {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <section ref={ref} className="py-32 relative">
-      <div className="container mx-auto px-6">
+    <section ref={ref} className="py-32 relative bg-[#030303]">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#4e99ff]/[0.03] via-transparent to-[#be65ff]/[0.03] blur-3xl" />
+
+      <div className="container mx-auto px-6 relative z-10">
         <motion.div
-          className="max-w-4xl mx-auto text-center glass-card rounded-3xl p-16 relative overflow-hidden"
+          className="max-w-4xl mx-auto text-center rounded-3xl p-16 relative overflow-hidden border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={isInView ? { opacity: 1, scale: 1 } : {}}
           transition={{ duration: 0.8 }}
         >
-          {/* Animated Background Gradient */}
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-[#4e99ff]/20 via-[#be65ff]/20 to-[#0fffc3]/20"
-            animate={{
-              backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-            }}
-            transition={{
-              duration: 10,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          />
-
           <div className="relative z-10">
             <motion.h2
-              className="text-5xl md:text-7xl font-bold font-[var(--font-orbitron)] mb-6 gradient-text-mint"
+              className="text-5xl md:text-7xl font-bold mb-6 tracking-tight"
+              style={{ fontFamily: 'var(--font-orbitron)' }}
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.2 }}
             >
-              Ready to Create Your Avatar?
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#0fffc3] to-[#4e99ff]">
+                Ready to Create Your Avatar?
+              </span>
             </motion.h2>
             <motion.p
-              className="text-xl text-[#c3d3e2] font-[var(--font-inter)] mb-10 max-w-2xl mx-auto"
+              className="text-lg text-white/40 font-light mb-10 max-w-2xl mx-auto tracking-wide"
+              style={{ fontFamily: 'var(--font-inter)' }}
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.4 }}
@@ -709,7 +812,8 @@ function CTASection() {
             </motion.p>
             <Link href="/Login">
               <motion.button
-                className="relative px-12 py-6 bg-gradient-to-r from-[#0fffc3] to-[#4e99ff] rounded-full text-[#101621] font-[var(--font-inter)] font-bold text-xl overflow-hidden group"
+                className="relative px-10 py-4 bg-gradient-to-r from-[#0fffc3] to-[#4e99ff] rounded-full text-[#030303] text-base font-medium tracking-wide overflow-hidden group"
+                style={{ fontFamily: 'var(--font-inter)' }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 whileHover={{ scale: 1.05 }}
@@ -725,16 +829,6 @@ function CTASection() {
                   animate={isHovered ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
                   transition={{ duration: 0.3 }}
                 />
-
-                {/* Ripple Effect */}
-                {isHovered && (
-                  <motion.div
-                    className="absolute inset-0 rounded-full bg-white/30"
-                    initial={{ scale: 0, opacity: 1 }}
-                    animate={{ scale: 2, opacity: 0 }}
-                    transition={{ duration: 0.6 }}
-                  />
-                )}
               </motion.button>
             </Link>
           </div>
@@ -750,69 +844,28 @@ function Footer() {
   const isInView = useInView(ref, { once: true, amount: 0.2 });
 
   return (
-    <footer ref={ref} className="relative py-16 border-t border-[#4e99ff]/20">
-      {/* Neural Pulse Line */}
-      <motion.div
-        className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#0fffc3] to-transparent"
-        initial={{ scaleX: 0 }}
-        animate={isInView ? { scaleX: 1 } : {}}
-        transition={{ duration: 1 }}
-      >
-        <motion.div
-          className="h-full w-32 bg-[#0fffc3]"
-          animate={{
-            x: ["0%", "calc(100vw - 8rem)", "0%"],
-          }}
-          transition={{
-            duration: 5,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      </motion.div>
-
-      {/* Floating Particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(15)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 rounded-full bg-[#abe6ff]"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            animate={{
-              y: [0, -30, 0],
-              x: [0, Math.random() * 20 - 10, 0],
-              opacity: [0.3, 1, 0.3],
-            }}
-            transition={{
-              duration: 4 + Math.random() * 2,
-              repeat: Infinity,
-              delay: Math.random() * 2,
-            }}
-          />
-        ))}
-      </div>
-
+    <footer ref={ref} className="relative py-16 bg-[#030303] border-t border-white/[0.08]">
       <div className="container mx-auto px-6 relative z-10">
         <div className="grid md:grid-cols-4 gap-8 mb-12">
           <div>
-            <h3 className="text-2xl font-bold font-[var(--font-orbitron)] gradient-text mb-4">
-              VideoAvatar
+            <h3 className="text-xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4e99ff] to-[#be65ff]">
+                VideoAvatar
+              </span>
             </h3>
-            <p className="text-[#c3d3e2] font-[var(--font-inter)] text-sm">
+            <p className="text-white/40 text-sm font-light tracking-wide" style={{ fontFamily: 'var(--font-inter)' }}>
               The future of AI-powered conversational avatars
             </p>
           </div>
           <div>
-            <h4 className="text-white font-[var(--font-orbitron)] font-semibold mb-4">Product</h4>
+            <h4 className="text-white font-semibold mb-4 text-sm tracking-wide" style={{ fontFamily: 'var(--font-orbitron)' }}>Product</h4>
             <ul className="space-y-2">
               {["Features", "Pricing", "Demo", "API"].map((item) => (
                 <li key={item}>
                   <a
                     href={`#${item.toLowerCase()}`}
-                    className="text-[#c3d3e2] hover:text-[#0fffc3] transition-colors font-[var(--font-inter)] text-sm"
+                    className="text-white/40 hover:text-[#0fffc3] transition-colors text-xs font-light tracking-wide"
+                    style={{ fontFamily: 'var(--font-inter)' }}
                   >
                     {item}
                   </a>
@@ -821,13 +874,14 @@ function Footer() {
             </ul>
           </div>
           <div>
-            <h4 className="text-white font-[var(--font-orbitron)] font-semibold mb-4">Company</h4>
+            <h4 className="text-white font-semibold mb-4 text-sm tracking-wide" style={{ fontFamily: 'var(--font-orbitron)' }}>Company</h4>
             <ul className="space-y-2">
               {["About", "Blog", "Careers", "Contact"].map((item) => (
                 <li key={item}>
                   <a
                     href={`#${item.toLowerCase()}`}
-                    className="text-[#c3d3e2] hover:text-[#0fffc3] transition-colors font-[var(--font-inter)] text-sm"
+                    className="text-white/40 hover:text-[#0fffc3] transition-colors text-xs font-light tracking-wide"
+                    style={{ fontFamily: 'var(--font-inter)' }}
                   >
                     {item}
                   </a>
@@ -836,13 +890,14 @@ function Footer() {
             </ul>
           </div>
           <div>
-            <h4 className="text-white font-[var(--font-orbitron)] font-semibold mb-4">Legal</h4>
+            <h4 className="text-white font-semibold mb-4 text-sm tracking-wide" style={{ fontFamily: 'var(--font-orbitron)' }}>Legal</h4>
             <ul className="space-y-2">
               {["Privacy", "Terms", "Security"].map((item) => (
                 <li key={item}>
                   <a
                     href={`#${item.toLowerCase()}`}
-                    className="text-[#c3d3e2] hover:text-[#0fffc3] transition-colors font-[var(--font-inter)] text-sm"
+                    className="text-white/40 hover:text-[#0fffc3] transition-colors text-xs font-light tracking-wide"
+                    style={{ fontFamily: 'var(--font-inter)' }}
                   >
                     {item}
                   </a>
@@ -852,8 +907,8 @@ function Footer() {
           </div>
         </div>
 
-        <div className="pt-8 border-t border-[#4e99ff]/20 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-[#c3d3e2] font-[var(--font-inter)] text-sm mb-4 md:mb-0">
+        <div className="pt-8 border-t border-white/[0.08] flex flex-col md:flex-row justify-between items-center">
+          <p className="text-white/30 text-xs font-light tracking-wide mb-4 md:mb-0" style={{ fontFamily: 'var(--font-inter)' }}>
             © 2024 VideoAvatar. All rights reserved.
           </p>
           <div className="flex gap-6">
@@ -861,7 +916,8 @@ function Footer() {
               <a
                 key={social}
                 href={`#${social.toLowerCase()}`}
-                className="text-[#c3d3e2] hover:text-[#0fffc3] transition-colors font-[var(--font-inter)] text-sm"
+                className="text-white/30 hover:text-[#0fffc3] transition-colors text-xs font-light tracking-wide"
+                style={{ fontFamily: 'var(--font-inter)' }}
               >
                 {social}
               </a>

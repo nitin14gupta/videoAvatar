@@ -10,6 +10,8 @@ from typing import Optional
 from utils.auth_utils import decode_jwt
 from utils.llm_utils import get_llm
 from utils.tts_utils import text_to_speech_with_voice_cloning_bytes
+from utils.phrase_detector import extract_phrase
+from utils.streaming_tts import TTSQueue, generate_tts_async
 from db.config import get_supabase_client
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -192,82 +194,162 @@ async def chat_with_avatar_stream(websocket: WebSocket):
         }
         messages.insert(user_msg_data).execute()
         
-        # Stream LLM response
+        # Stream LLM response with optimized TTS pipeline
         llm = get_llm(temperature=0.7)
         full_response = ""
         text_buffer = ""
+        chunk_id_counter = 0
         
-        # Stream LLM tokens
+        # Initialize TTS queue for parallel generation
+        tts_queue = TTSQueue() if avatar.get("audio_url") else None
+        
+        # Background task to send TTS chunks as they complete
+        send_tts_chunks_active = {"active": True}
+        async def send_tts_chunks():
+            """Continuously send TTS chunks as they become available"""
+            if not tts_queue:
+                return
+            
+            logger.info("Started TTS chunk sender background task")
+            chunk_count = 0
+            while send_tts_chunks_active["active"]:
+                try:
+                    chunk = await tts_queue.wait_for_chunk(timeout=0.5)
+                    if chunk:
+                        audio_bytes = chunk.get("audio")
+                        text = chunk.get("text", "")
+                        if audio_bytes:
+                            audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+                            await websocket.send_json({
+                                "type": "audio_chunk",
+                                "text": text,
+                                "audio": audio_base64
+                            })
+                            chunk_count += 1
+                            logger.info(f"Sent audio chunk {chunk_count}: {text[:30]}...")
+                    else:
+                        # No chunks available, check if we should continue
+                        await asyncio.sleep(0.1)
+                except asyncio.CancelledError:
+                    logger.info("TTS chunk sender task cancelled")
+                    break
+                except Exception as e:
+                    logger.error(f"Error in send_tts_chunks: {e}", exc_info=True)
+                    # Don't break on error, keep trying
+                    await asyncio.sleep(0.1)
+            
+            logger.info(f"TTS chunk sender task finished. Sent {chunk_count} chunks total")
+        
+        # Start TTS chunk sender in background
+        tts_sender_task = None
+        if tts_queue:
+            tts_sender_task = asyncio.create_task(send_tts_chunks())
+        
+        # Stream LLM tokens with optimized phrase detection
         async for chunk in llm.astream(llm_messages):
             if chunk.content:
                 text_buffer += chunk.content
                 full_response += chunk.content
                 
-                # Send text chunk to frontend
+                # Send text chunk to frontend immediately
                 await websocket.send_json({
                     "type": "text_chunk",
                     "text": chunk.content
                 })
                 
-                # Check if we have enough text for a TTS chunk (sentence or ~15 words)
-                words = text_buffer.split()
-                if len(words) >= 15 or any(punct in text_buffer for punct in ['.', '!', '?']):
-                    # Find sentence boundary
-                    sentence_end = max(
-                        text_buffer.rfind('.'),
-                        text_buffer.rfind('!'),
-                        text_buffer.rfind('?')
-                    )
+                # Extract phrases as they become available (smaller chunks: 3-5 words)
+                while text_buffer.strip():
+                    phrase, remaining = extract_phrase(text_buffer, min_words=3, max_words=6)
                     
-                    if sentence_end > 0:
-                        tts_chunk = text_buffer[:sentence_end + 1].strip()
-                        text_buffer = text_buffer[sentence_end + 1:].strip()
+                    if phrase and len(phrase.strip()) > 0:
+                        # Start TTS generation for this phrase immediately (non-blocking)
+                        if tts_queue and avatar.get("audio_url"):
+                            chunk_id = chunk_id_counter
+                            chunk_id_counter += 1
+                            await tts_queue.add_tts_task(
+                                text=phrase.strip(),
+                                reference_audio_url=avatar.get("audio_url"),
+                                language=avatar.get("language", "en"),
+                                chunk_id=chunk_id
+                            )
+                            logger.debug(f"Started TTS for phrase: {phrase[:50]}...")
+                        
+                        # Update buffer
+                        text_buffer = remaining
                     else:
-                        # No sentence boundary, use word boundary
-                        tts_chunk = ' '.join(words[:15])
-                        text_buffer = ' '.join(words[15:])
-                    
-                    if tts_chunk and len(tts_chunk.split()) >= 5:  # Minimum 5 words
-                        # Generate TTS for this chunk
-                        try:
-                            if avatar.get("audio_url"):
-                                audio_bytes = await asyncio.to_thread(
-                                    text_to_speech_with_voice_cloning_bytes,
-                                    tts_chunk,
-                                    avatar.get("audio_url"),
-                                    avatar.get("language", "en")
-                                )
-                                
-                                if audio_bytes:
-                                    audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
-                                    await websocket.send_json({
-                                        "type": "audio_chunk",
-                                        "text": tts_chunk,
-                                        "audio": audio_base64
-                                    })
-                        except Exception as e:
-                            logger.error(f"Error generating TTS chunk: {e}")
+                        # Not enough text for a phrase yet, wait for more tokens
+                        break
         
-        # Process remaining text buffer
-        if text_buffer.strip() and len(text_buffer.split()) >= 5:
-            try:
-                if avatar.get("audio_url"):
-                    audio_bytes = await asyncio.to_thread(
-                        text_to_speech_with_voice_cloning_bytes,
-                        text_buffer.strip(),
-                        avatar.get("audio_url"),
-                        avatar.get("language", "en")
-                    )
-                    
+        # Process any remaining text in buffer
+        if text_buffer.strip():
+            remaining_text = text_buffer.strip()
+            if tts_queue and avatar.get("audio_url") and len(remaining_text.split()) >= 2:
+                chunk_id = chunk_id_counter
+                await tts_queue.add_tts_task(
+                    text=remaining_text,
+                    reference_audio_url=avatar.get("audio_url"),
+                    language=avatar.get("language", "en"),
+                    chunk_id=chunk_id
+                )
+        
+        # Wait for all TTS tasks to complete
+        if tts_queue:
+            logger.info("Waiting for all TTS tasks to complete...")
+            # Wait for all tasks to complete (all chunks generated)
+            await tts_queue.wait_all()
+            logger.info("All TTS tasks completed - all chunks should be in queue now")
+            
+            # Keep background sender running and wait for it to send all chunks
+            # Give it time to process all chunks in the queue
+            max_wait_time = 15.0  # Maximum time to wait for chunks to be sent
+            wait_start = asyncio.get_event_loop().time()
+            queue_size = tts_queue.get_queue_size()
+            logger.info(f"Queue has {queue_size} chunks waiting to be sent")
+            
+            # Wait until queue is empty or timeout
+            while not tts_queue.is_queue_empty():
+                elapsed = asyncio.get_event_loop().time() - wait_start
+                if elapsed > max_wait_time:
+                    remaining = tts_queue.get_queue_size()
+                    logger.warning(f"Timeout waiting for chunks to be sent after {max_wait_time}s. {remaining} chunks still in queue")
+                    break
+                await asyncio.sleep(0.2)
+            
+            # Give background sender a final moment to send any chunks it's processing
+            await asyncio.sleep(0.5)
+            
+            # Send any remaining chunks manually (in case background task missed them)
+            remaining_chunks = 0
+            max_remaining_attempts = 20  # Prevent infinite loop
+            attempts = 0
+            while not tts_queue.is_queue_empty() and attempts < max_remaining_attempts:
+                chunk = await tts_queue.wait_for_chunk(timeout=0.2)
+                if chunk:
+                    audio_bytes = chunk.get("audio")
+                    text = chunk.get("text", "")
                     if audio_bytes:
                         audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
                         await websocket.send_json({
                             "type": "audio_chunk",
-                            "text": text_buffer.strip(),
+                            "text": text,
                             "audio": audio_base64
                         })
-            except Exception as e:
-                logger.error(f"Error generating final TTS chunk: {e}")
+                        remaining_chunks += 1
+                        logger.info(f"Sent remaining audio chunk {remaining_chunks}: {text[:30]}...")
+                attempts += 1
+            
+            # Stop the background sender task
+            send_tts_chunks_active["active"] = False
+            if tts_sender_task:
+                # Give it a moment to finish its current iteration
+                await asyncio.sleep(0.5)
+                tts_sender_task.cancel()
+                try:
+                    await tts_sender_task
+                except asyncio.CancelledError:
+                    pass
+            
+            logger.info(f"Finished processing TTS. Sent {remaining_chunks} remaining chunks manually")
         
         # Save full avatar response to DB
         avatar_msg_data = {

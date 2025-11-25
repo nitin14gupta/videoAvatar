@@ -228,7 +228,7 @@ class ApiService {
 
     // Get initialization status
     getInitializationStatus() {
-        return this.request<{ whisper: boolean; tts: boolean; llm: boolean; initializing: boolean }>(
+        return this.request<{ tts: boolean; llm: boolean; initializing: boolean }>(
             '/initialization-status'
         );
     }
@@ -270,3 +270,4 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
+

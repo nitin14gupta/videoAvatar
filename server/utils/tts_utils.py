@@ -9,11 +9,177 @@ from typing import Optional
 from TTS.api import TTS
 from pathlib import Path
 import tempfile
+import soundfile as sf
+import numpy as np
 
 # Fix for PyTorch 2.6+ compatibility with XTTS-v2
 os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
 
+# Disable torchcodec to avoid FFmpeg dependency issues
+# Force torchaudio to use soundfile backend
+os.environ["TORCHAUDIO_USE_SOUNDFILE"] = "1"
+
 logger = logging.getLogger(__name__)
+
+
+def patch_torchaudio_load():
+    """
+    Patch torchaudio.load to use soundfile backend instead of torchcodec.
+    This fixes the FFmpeg/torchcodec dependency issue.
+    """
+    try:
+        import torchaudio
+        import sys
+        
+        # Prevent torchcodec from being imported/loaded
+        # This is a more aggressive approach
+        if 'torchcodec' not in sys.modules:
+            # Create a dummy module to prevent actual import
+            class DummyTorchcodec:
+                pass
+            sys.modules['torchcodec'] = DummyTorchcodec()
+            sys.modules['torchcodec.decoders'] = DummyTorchcodec()
+            logger.info("Blocked torchcodec import")
+        
+        # Try to set backend preference to soundfile
+        try:
+            # Check if backend registration is available
+            if hasattr(torchaudio, 'set_audio_backend'):
+                torchaudio.set_audio_backend('soundfile')
+                logger.info("Set torchaudio backend to soundfile")
+        except Exception:
+            pass
+        
+        # Also patch the load function directly as fallback
+        from functools import wraps
+        
+        # Store original load function
+        if not hasattr(torchaudio, '_original_load'):
+            torchaudio._original_load = torchaudio.load
+        
+        @wraps(torchaudio.load)
+        def patched_load(filepath, *args, **kwargs):
+            """Load audio using soundfile instead of torchcodec"""
+            try:
+                # Use soundfile to load audio
+                data, sample_rate = sf.read(filepath)
+                
+                # Convert to torch tensor
+                if data.dtype != np.float32:
+                    data = data.astype(np.float32)
+                
+                # Handle mono/stereo - torchaudio expects [channels, samples]
+                if len(data.shape) == 1:
+                    # Mono: add channel dimension [1, samples]
+                    data = data.reshape(1, -1)
+                elif len(data.shape) == 2:
+                    # Stereo: ensure channels are first [channels, samples]
+                    if data.shape[0] < data.shape[1]:
+                        # Samples are first, transpose
+                        data = data.T
+                
+                # Convert to torch tensor
+                tensor = torch.from_numpy(data)
+                
+                return tensor, sample_rate
+            except Exception as e:
+                logger.warning(f"Soundfile load failed, trying original torchaudio.load: {e}")
+                # Fallback to original if soundfile fails
+                try:
+                    return torchaudio._original_load(filepath, *args, **kwargs)
+                except Exception as fallback_error:
+                    logger.error(f"Both soundfile and torchaudio.load failed: {fallback_error}")
+                    raise
+        
+        # Replace torchaudio.load
+        torchaudio.load = patched_load
+        logger.info("Patched torchaudio.load to use soundfile backend")
+        
+    except Exception as e:
+        logger.warning(f"Could not patch torchaudio.load: {e}. TTS may fail if torchcodec is not available.")
+
+
+def patch_xtts_load_audio():
+    """
+    Patch XTTS model's load_audio function to use soundfile instead of torchaudio.
+    This is a more direct fix for the torchcodec issue.
+    """
+    try:
+        from TTS.tts.models.xtts import load_audio as xtts_load_audio
+        from functools import wraps
+        
+        @wraps(xtts_load_audio)
+        def patched_xtts_load_audio(file_path, load_sr=24000):
+            """Load audio using soundfile for XTTS - returns 2D tensor [channels, samples]"""
+            try:
+                # Load with soundfile
+                # soundfile returns: mono -> (samples,), stereo -> (samples, channels)
+                data, sr = sf.read(file_path)
+                
+                # Convert to float32 if needed
+                if data.dtype != np.float32:
+                    data = data.astype(np.float32)
+                
+                # Resample if needed
+                if sr != load_sr:
+                    import librosa
+                    data = librosa.resample(data, orig_sr=sr, target_sr=load_sr)
+                
+                # Handle channels - XTTS expects [channels, samples] format (2D tensor)
+                # soundfile returns: mono -> (samples,), stereo -> (samples, channels)
+                if len(data.shape) == 1:
+                    # Mono: reshape to [1, samples] for 2D tensor
+                    data = data.reshape(1, -1)
+                elif len(data.shape) == 2:
+                    # Stereo: soundfile returns (samples, channels), need (channels, samples)
+                    # Transpose to get [channels, samples]
+                    data = data.T
+                else:
+                    # Unexpected shape (more than 2D), flatten and convert to mono
+                    data = data.flatten()
+                    data = data.reshape(1, -1)
+                
+                # Ensure we have 2D tensor [channels, samples]
+                if len(data.shape) != 2:
+                    logger.warning(f"Unexpected data shape after processing: {data.shape}, reshaping to 2D")
+                    if len(data.shape) == 1:
+                        data = data.reshape(1, -1)
+                    else:
+                        data = data.flatten().reshape(1, -1)
+                
+                # Convert to torch tensor - XTTS expects 2D tensor [channels, samples]
+                audio_tensor = torch.from_numpy(data).float()
+                
+                # Verify shape is correct
+                if len(audio_tensor.shape) != 2:
+                    logger.error(f"Audio tensor has wrong shape: {audio_tensor.shape}, expected 2D [channels, samples]")
+                    # Force reshape
+                    if len(audio_tensor.shape) == 1:
+                        audio_tensor = audio_tensor.unsqueeze(0)  # Add channel dimension
+                
+                # Return only the tensor, NOT a tuple
+                # XTTS load_audio should return just the audio tensor with shape [channels, samples]
+                return audio_tensor
+            except Exception as e:
+                logger.warning(f"Soundfile load failed in XTTS patch, trying original: {e}")
+                # Fallback to original
+                try:
+                    result = xtts_load_audio(file_path, load_sr)
+                    # Ensure we return only tensor even from original
+                    if isinstance(result, tuple):
+                        return result[0]  # Return only tensor
+                    return result
+                except Exception as fallback_error:
+                    logger.error(f"Original load_audio also failed: {fallback_error}")
+                    raise
+        
+        # Replace the function in the module
+        import TTS.tts.models.xtts as xtts_module
+        xtts_module.load_audio = patched_xtts_load_audio
+        logger.info("Patched XTTS load_audio to use soundfile")
+        
+    except Exception as e:
+        logger.warning(f"Could not patch XTTS load_audio: {e}")
 
 
 def patch_gpt_inference_model():
@@ -134,6 +300,18 @@ def get_tts_instance():
         try:
             device = get_device()
             logger.info("Initializing XTTS-v2 model...")
+            
+            # CRITICAL: Patch audio loading BEFORE loading the model
+            # This prevents torchcodec from being used
+            try:
+                patch_torchaudio_load()
+            except Exception as e:
+                logger.warning(f"torchaudio patch failed: {e}")
+            
+            try:
+                patch_xtts_load_audio()
+            except Exception as e:
+                logger.warning(f"XTTS load_audio patch failed: {e}")
             
             # Patch the model before loading
             patch_gpt_inference_model()

@@ -10,6 +10,61 @@ import { Avatar } from "@/src/api/config";
 import CustomCursor from "@/src/component/CustomCursor";
 import { useToast } from "@/src/context/ToastContext";
 
+// TypeScript definitions for Web Speech API
+interface SpeechRecognitionInterface extends EventTarget {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    start(): void;
+    stop(): void;
+    abort(): void;
+    onresult: ((event: SpeechRecognitionEvent) => void) | null;
+    onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+    onend: (() => void) | null;
+}
+
+interface SpeechRecognitionConstructor {
+    new(): SpeechRecognitionInterface;
+}
+
+declare var SpeechRecognition: SpeechRecognitionConstructor;
+declare var webkitSpeechRecognition: SpeechRecognitionConstructor;
+
+interface SpeechRecognitionEvent {
+    resultIndex: number;
+    results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+    length: number;
+    item(index: number): SpeechRecognitionResult;
+    [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+    length: number;
+    item(index: number): SpeechRecognitionAlternative;
+    [index: number]: SpeechRecognitionAlternative;
+    isFinal: boolean;
+}
+
+interface SpeechRecognitionAlternative {
+    transcript: string;
+    confidence: number;
+}
+
+interface SpeechRecognitionErrorEvent {
+    error: string;
+    message: string;
+}
+
+declare global {
+    interface Window {
+        SpeechRecognition: SpeechRecognitionConstructor;
+        webkitSpeechRecognition: SpeechRecognitionConstructor;
+    }
+}
+
 interface Message {
     sender: "user" | "avatar";
     content: string;
@@ -33,30 +88,29 @@ export default function SessionPage() {
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [playingAudio, setPlayingAudio] = useState<string | null>(null);
-    const [isInitializing, setIsInitializing] = useState(true);
+    const [isInitializing, setIsInitializing] = useState(false);
     const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
     const audioQueueRef = useRef<Array<{ url: string; audio: HTMLAudioElement }>>([]);
     const isPlayingQueueRef = useRef(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
-    const mediaRecorderRef = useRef<any>(null); // Can be MediaRecorder or Web Audio processor
-    const websocketRef = useRef<WebSocket | null>(null);
-    const audioChunksRef = useRef<Blob[]>([]);
+    const speechRecognitionRef = useRef<SpeechRecognitionInterface | null>(null);
+    const conversationWebSocketRef = useRef<WebSocket | null>(null);
 
     useEffect(() => {
-        // Check initialization status and fetch avatar
+        // Fetch avatar details
         const initialize = async () => {
             try {
-                // Check if services are initialized
+                // Check if TTS and LLM are initialized (no whisper needed)
                 const initStatus = await apiService.getInitializationStatus();
 
-                if (!initStatus.whisper || !initStatus.tts || !initStatus.llm) {
+                if (!initStatus.tts || !initStatus.llm) {
                     setIsInitializing(true);
                     // Poll until initialized
                     const checkInterval = setInterval(async () => {
                         const status = await apiService.getInitializationStatus();
-                        if (status.whisper && status.tts && status.llm && !status.initializing) {
+                        if (status.tts && status.llm && !status.initializing) {
                             clearInterval(checkInterval);
                             setIsInitializing(false);
                         }
@@ -122,127 +176,118 @@ export default function SessionPage() {
 
         // Cleanup on unmount
         return () => {
+            // Stop recording if active
+            if (isRecording && speechRecognitionRef.current) {
+                try {
+                    speechRecognitionRef.current.stop();
+                } catch (e) {
+                    console.error("Error stopping speech recognition:", e);
+                }
+            }
+
+            // Stop all media tracks
             if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
+                streamRef.current.getTracks().forEach(track => {
+                    track.stop();
+                    track.enabled = false;
+                });
+                streamRef.current = null;
             }
-            if (websocketRef.current) {
-                websocketRef.current.close();
+
+            // Close conversation WebSocket if open
+            if (conversationWebSocketRef.current) {
+                try {
+                    conversationWebSocketRef.current.close();
+                } catch (e) {
+                    console.error("Error closing conversation WebSocket:", e);
+                }
+                conversationWebSocketRef.current = null;
             }
+
             // Cleanup audio queue
             audioQueueRef.current.forEach(({ url, audio }) => {
                 audio.pause();
+                audio.src = '';
                 URL.revokeObjectURL(url);
             });
             audioQueueRef.current = [];
+            isPlayingQueueRef.current = false;
+
             if (audioPlayerRef.current) {
                 audioPlayerRef.current.pause();
+                audioPlayerRef.current.src = '';
                 audioPlayerRef.current = null;
             }
         };
     }, []);
 
-    const connectWebSocket = () => {
-        try {
-            const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'https' : 'http';
-            const wsUrl = API_CONFIG.ENDPOINTS.WHISPER.WEBSOCKET(protocol);
-
-            const ws = new WebSocket(wsUrl);
-
-            ws.onopen = () => {
-                console.log("WebSocket connected");
-            };
-
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.type === "transcription" && data.text) {
-                        setTranscription(prev => {
-                            // Append new text, handling partial updates
-                            if (prev && data.text.startsWith(prev)) {
-                                return data.text;
-                            }
-                            return prev + " " + data.text;
-                        });
-                    } else if (data.type === "final" && data.text) {
-                        setTranscription(data.text);
-                    } else if (data.type === "error") {
-                        console.error("Whisper error:", data.message);
-                        showError("Transcription Error", data.message);
-                    }
-                } catch (e) {
-                    console.error("Error parsing WebSocket message:", e);
-                }
-            };
-
-            ws.onerror = (error) => {
-                console.error("WebSocket error:", error);
-                showError("Connection Error", "Failed to connect to transcription service");
-            };
-
-            ws.onclose = () => {
-                console.log("WebSocket closed");
-            };
-
-            websocketRef.current = ws;
-        } catch (error) {
-            console.error("Failed to create WebSocket:", error);
-            showError("Connection Error", "Failed to initialize transcription");
-        }
+    // Check if Web Speech API is available
+    const isSpeechRecognitionAvailable = () => {
+        return typeof window !== 'undefined' && (
+            'SpeechRecognition' in window ||
+            'webkitSpeechRecognition' in window
+        );
     };
 
-    const startRecording = async () => {
-        if (!streamRef.current) {
-            showError("Error", "No audio stream available");
+    const startRecording = () => {
+        // Check if Web Speech API is available
+        if (!isSpeechRecognitionAvailable()) {
+            showError("Not Supported", "Speech recognition is not supported in your browser. Please use Chrome or Edge.");
             return;
         }
 
         try {
-            // Connect WebSocket first
-            connectWebSocket();
+            // Get SpeechRecognition (Chrome/Edge) or webkitSpeechRecognition (Safari)
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
 
-            // Wait a bit for WebSocket to connect
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Configure recognition
+            recognition.continuous = true; // Keep listening until stopped
+            recognition.interimResults = true; // Get interim results as you speak
+            recognition.lang = "en-US"; // Language (can be made configurable)
 
-            // Use Web Audio API to capture raw PCM audio directly
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-            const source = audioContext.createMediaStreamSource(streamRef.current);
+            // Handle results
+            recognition.onresult = (event: SpeechRecognitionEvent) => {
+                let fullTranscript = "";
 
-            // Create a script processor to capture audio samples
-            const bufferSize = 4096;
-            const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
-
-            const recordingState = { active: true };
-
-            processor.onaudioprocess = (event) => {
-                if (!recordingState.active || !websocketRef.current || websocketRef.current.readyState !== WebSocket.OPEN) {
-                    return;
+                // Process ALL results from the beginning to get complete transcript
+                for (let i = 0; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    fullTranscript += transcript + " ";
                 }
 
-                try {
-                    const inputData = event.inputBuffer.getChannelData(0);
-                    const pcmData = new Int16Array(inputData.length);
-
-                    // Convert float32 (-1 to 1) to int16
-                    for (let i = 0; i < inputData.length; i++) {
-                        const sample = Math.max(-1, Math.min(1, inputData[i]));
-                        pcmData[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-                    }
-
-                    // Send PCM data to WebSocket
-                    websocketRef.current.send(pcmData.buffer);
-                } catch (error) {
-                    console.error("Error processing audio:", error);
+                // Update transcription with complete text
+                const trimmedTranscript = fullTranscript.trim();
+                if (trimmedTranscript) {
+                    setTranscription(trimmedTranscript);
                 }
             };
 
-            // Connect the processor
-            source.connect(processor);
-            processor.connect(audioContext.destination);
+            // Handle errors
+            recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+                console.error("Speech recognition error:", event.error);
+                if (event.error === "no-speech") {
+                    // User stopped speaking, this is normal
+                    return;
+                } else if (event.error === "not-allowed") {
+                    showError("Permission Denied", "Microphone permission was denied. Please enable it in your browser settings.");
+                } else {
+                    showError("Recognition Error", `Speech recognition error: ${event.error}`);
+                }
+            };
 
-            // Store processor reference for cleanup
-            (mediaRecorderRef as any).current = { processor, audioContext, source, recordingState };
+            // Handle end of recognition
+            recognition.onend = () => {
+                console.log("Speech recognition ended");
+                setIsRecording(false);
+                setAudioEnabled(false);
+            };
 
-            audioChunksRef.current = [];
+            // Start recognition
+            recognition.start();
+            speechRecognitionRef.current = recognition;
+
+            // Clear previous transcription
             setTranscription("");
             setIsRecording(true);
             setAudioEnabled(true);
@@ -255,8 +300,8 @@ export default function SessionPage() {
                 }
             }
         } catch (error) {
-            console.error("Error starting recording:", error);
-            showError("Recording Error", "Failed to start audio recording");
+            console.error("Error starting speech recognition:", error);
+            showError("Recording Error", "Failed to start speech recognition");
         }
     };
 
@@ -264,20 +309,24 @@ export default function SessionPage() {
         setIsRecording(false);
         setAudioEnabled(false);
 
-        // Cleanup Web Audio API processor
-        if (mediaRecorderRef.current && (mediaRecorderRef.current as any).processor) {
-            const { processor, audioContext, source, recordingState } = mediaRecorderRef.current as any;
-            if (recordingState) {
-                recordingState.active = false;
-            }
+        // Get current transcription before stopping (in case it gets cleared)
+        let finalText = transcription.trim();
+
+        // Stop speech recognition - this will trigger onend event
+        if (speechRecognitionRef.current) {
             try {
-                source.disconnect();
-                processor.disconnect();
-                processor.onaudioprocess = null;
+                // Wait a brief moment to ensure final results are processed
+                speechRecognitionRef.current.stop();
+
+                // Wait a bit for final results to be processed
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                // Get the final transcription after stopping
+                finalText = transcription.trim();
             } catch (e) {
-                console.error("Error disconnecting audio processor:", e);
+                console.error("Error stopping speech recognition:", e);
             }
-            mediaRecorderRef.current = null;
+            speechRecognitionRef.current = null;
         }
 
         // Disable audio track
@@ -288,16 +337,14 @@ export default function SessionPage() {
             }
         }
 
-        // Finalize transcription and close WebSocket
-        if (websocketRef.current) {
-            // Wait a bit for final audio chunks
-            await new Promise(resolve => setTimeout(resolve, 500));
-            websocketRef.current.close();
-        }
-
         // Send final transcription to LLM if we have text
-        if (transcription.trim()) {
-            await sendToLLM(transcription.trim());
+        if (finalText) {
+            await sendToLLM(finalText);
+            // Clear transcription after sending
+            setTranscription("");
+        } else {
+            // Clear transcription if empty
+            setTranscription("");
         }
     };
 
@@ -367,8 +414,8 @@ export default function SessionPage() {
                 }
             );
 
-            // Store WebSocket reference for cleanup
-            (websocketRef as any).current = ws;
+            // Store conversation WebSocket reference for cleanup
+            conversationWebSocketRef.current = ws;
 
         } catch (error: any) {
             console.error("Error starting streaming chat:", error);

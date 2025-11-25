@@ -31,9 +31,6 @@ export const API_CONFIG = {
             GET_CONVERSATIONS: '/conversations/conversations',
             GET_MESSAGES: (id: string) => `/conversations/conversations/${id}/messages`,
         },
-        WHISPER: {
-            WEBSOCKET: (protocol: string) => `${protocol === 'https' ? 'wss' : 'ws'}://${typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'localhost:8000' : 'ccsapi.mafatlaleducation.dev'}/whisper/transcribe`,
-        },
         HEALTH: '/health',
     },
 

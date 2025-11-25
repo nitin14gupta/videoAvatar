@@ -4,6 +4,7 @@ pydantic
 requests
 python-dotenv
 psycopg2-binary
+torchcodec
 supabase
 pyjwt
 bcrypt
@@ -20,6 +21,6 @@ numpy
 torch
 librosa 
 TTS
-transformers
+transformers<4.36.0
 hf_xet
 gradio

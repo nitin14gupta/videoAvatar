@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 from routes.auth_routes import auth_router
 from routes.avatar_routes import avatar_router
 from routes.conversation_routes import conversation_router
-from routes.whisper_routes import whisper_router
 
 # Configure logging
 logging.basicConfig(
@@ -21,29 +20,17 @@ load_dotenv()
 
 # Global initialization status
 _initialization_status = {
-    "whisper": False,
     "tts": False,
     "llm": False,
     "initializing": False
 }
 
 def initialize_services():
-    """Initialize Whisper, TTS, and LLM on server startup"""
+    """Initialize TTS and LLM on server startup (Speech recognition is handled client-side with Web Speech API)"""
     global _initialization_status
     
     _initialization_status["initializing"] = True
     logger.info("Starting service initialization...")
-    
-    try:
-        # Initialize Whisper
-        logger.info("Initializing Whisper ASR...")
-        from routes.whisper_routes import get_asr_instance
-        get_asr_instance()
-        _initialization_status["whisper"] = True
-        logger.info("✓ Whisper initialized successfully")
-    except Exception as e:
-        logger.error(f"✗ Whisper initialization failed: {e}")
-        _initialization_status["whisper"] = False
     
     try:
         # Initialize TTS
@@ -105,7 +92,6 @@ def create_app() -> FastAPI:
     app.include_router(auth_router, prefix="/auth", tags=["auth"])
     app.include_router(avatar_router, prefix="/avatars", tags=["avatars"])
     app.include_router(conversation_router, prefix="/conversations", tags=["conversations"])
-    app.include_router(whisper_router, prefix="/whisper", tags=["whisper"])
     
     # Initialize services on startup
     @app.on_event("startup")

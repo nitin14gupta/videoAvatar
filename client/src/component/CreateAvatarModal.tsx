@@ -44,13 +44,13 @@ export default function CreateAvatarModal({ isOpen, onClose, onSuccess }: Create
             }
 
             // Read the file and show crop modal
-            const reader = new FileReader();
-            reader.onloadend = () => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
                 const imageUrl = reader.result as string;
                 setImageToCrop(imageUrl);
                 setShowCropModal(true);
-            };
-            reader.readAsDataURL(file);
+                    };
+                    reader.readAsDataURL(file);
         }
     };
 

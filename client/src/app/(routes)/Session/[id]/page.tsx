@@ -136,8 +136,8 @@ export default function SessionPage() {
                     setBlinkingAnimationUrl(res.avatar.blinking_video_url);
                 } else {
                     // Fallback: generate on-the-fly (for backward compatibility or if processing failed)
-                    const animationUrl = apiService.getBlinkingAnimationUrl(avatarId);
-                    setBlinkingAnimationUrl(animationUrl);
+                const animationUrl = apiService.getBlinkingAnimationUrl(avatarId);
+                setBlinkingAnimationUrl(animationUrl);
                 }
             } catch (error) {
                 console.error("Failed to initialize:", error);

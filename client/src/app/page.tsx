@@ -2,19 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform, useInView, useAnimation } from "framer-motion";
-import {
-  DraggableCardBody,
-  DraggableCardContainer,
-} from "@/src/components/ui/draggable-card";
-import Image from "next/image";
-import Link from "next/link";
 import CustomCursor from "@/src/component/CustomCursor";
 import { HeroGeometric } from "@/src/components/ui/shape-landing-hero";
 import TestimonialCard, { Testimonial } from "@/src/components/ui/multi-media-testimonials";
 import { FeatureSteps } from "@/src/components/ui/features-section";
 import CurvedLoop from "@/src/component/CurvedLoop";
 import InfiniteMenu from "@/src/component/InfiniteMenu";
-
+import Link from "next/link";
 export default function Home() {
 
   const testimonials: Testimonial[] = [
@@ -45,14 +39,12 @@ export default function Home() {
       thumbnail: "https://pub-940ccf6255b54fa799a9b01050e6c227.r2.dev/dashboard-gradient.png",
     },
     {
-      type: "text",
       name: "Diana Prince",
       profile: "https://github.com/shadcn.png",
       title: "Flawless Scheduling Experience",
       designation: "Full Stack Developer",
       content:
         "The UI is sleek, intuitive, and makes scheduling interviews a breeze. 10/10 experience!",
-      rating: 5,
     },
     {
       name: "Ethan Hunt",
@@ -88,7 +80,6 @@ export default function Home() {
         "Testing has become more efficient with the tools provided here. Very intuitive and well-designed.",
     },
     {
-      type: "text",
       name: "Ian Wright",
       profile: "https://github.com/shadcn.png",
       title: "Time-Saving Integration",
@@ -211,51 +202,6 @@ export default function Home() {
     },
   ]
 
-  const items = [
-    {
-      title: "Tyler Durden",
-      image:
-        "https://images.unsplash.com/photo-1732310216648-603c0255c000?q=80&w=3540&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      className: "absolute top-10 left-[20%] rotate-[-5deg]",
-    },
-    {
-      title: "The Narrator",
-      image:
-        "https://images.unsplash.com/photo-1697909623564-3dae17f6c20b?q=80&w=2667&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      className: "absolute top-40 left-[25%] rotate-[-7deg]",
-    },
-    {
-      title: "Iceland",
-      image:
-        "https://images.unsplash.com/photo-1501854140801-50d01698950b?q=80&w=2600&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      className: "absolute top-5 left-[40%] rotate-[8deg]",
-    },
-    {
-      title: "Japan",
-      image:
-        "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?q=80&w=3648&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      className: "absolute top-32 left-[55%] rotate-[10deg]",
-    },
-    {
-      title: "Norway",
-      image:
-        "https://images.unsplash.com/photo-1421789665209-c9b2a435e3dc?q=80&w=3542&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      className: "absolute top-20 right-[35%] rotate-[2deg]",
-    },
-    {
-      title: "New Zealand",
-      image:
-        "https://images.unsplash.com/photo-1505142468610-359e7d316be0?q=80&w=3070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      className: "absolute top-24 left-[45%] rotate-[-7deg]",
-    },
-    {
-      title: "Canada",
-      image:
-        "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=2560&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      className: "absolute top-8 left-[30%] rotate-[4deg]",
-    },
-  ];
-
   const menuItems = [
     {
       image: 'https://picsum.photos/300/300?grayscale',
@@ -321,26 +267,6 @@ export default function Home() {
         />
       </div>
 
-      {/* Avatar Gallery */}
-      {/* <AvatarGallery /> */}
-      <DraggableCardContainer className="relative flex min-h-screen w-full items-center justify-center overflow-clip">
-        <p className="absolute top-1/2 mx-auto max-w-sm -translate-y-3/4 text-center text-2xl font-black text-neutral-400 md:text-4xl dark:text-neutral-800">
-          If its your first day at Fight Club, you have to fight.
-        </p>
-        {items.map((item) => (
-          <DraggableCardBody className={item.className}>
-            <img
-              src={item.image}
-              alt={item.title}
-              className="pointer-events-none relative z-10 h-80 w-80 object-cover"
-            />
-            <h3 className="mt-4 text-center text-2xl font-bold text-neutral-700 dark:text-neutral-300">
-              {item.title}
-            </h3>
-          </DraggableCardBody>
-        ))}
-      </DraggableCardContainer>
-
       {/* Testimonials */}
       {/* <TestimonialsSection /> */}
       <section className="px-6 py-16">
@@ -387,7 +313,7 @@ function NavBar() {
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className={`fixed top-0 w-full z-40 transition-all duration-300 ${scrolled ? "bg-[#030303]/80 backdrop-blur-md border-b border-white/[0.08]" : "bg-transparent"
+      className={`fixed top-0 w-full z-40 transition-all duration-300 ${scrolled ? "bg-[#030303]/80 backdrop-blur-md" : "bg-transparent"
         }`}
     >
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -429,92 +355,6 @@ function NavBar() {
         </div>
       </div>
     </motion.nav>
-  );
-}
-
-
-// Features Section
-function FeaturesSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, amount: 0.2 });
-
-  const features = [
-    {
-      title: "Neural-Powered",
-      description: "Advanced AI neural networks create lifelike conversations and expressions",
-      icon: "🧠",
-      gradient: "from-[#4e99ff] to-[#be65ff]",
-    },
-    {
-      title: "Real-Time Interaction",
-      description: "Instant responses with natural speech patterns and emotional intelligence",
-      icon: "⚡",
-      gradient: "from-[#0fffc3] to-[#4e99ff]",
-    },
-    {
-      title: "Customizable Avatars",
-      description: "Design unique avatars with personalized appearance and voice characteristics",
-      icon: "🎨",
-      gradient: "from-[#ff9aff] to-[#be65ff]",
-    },
-    {
-      title: "Seamless Integration",
-      description: "Easy API integration for websites, apps, and virtual environments",
-      icon: "🔗",
-      gradient: "from-[#ef476f] to-[#ff9aff]",
-    },
-  ];
-
-  return (
-    <section id="features" ref={ref} className="py-32 relative bg-[#030303]">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#4e99ff]/[0.03] via-transparent to-[#be65ff]/[0.03] blur-3xl" />
-
-      <div className="container mx-auto px-6 relative z-10">
-        <motion.div
-          className="text-center mb-20"
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8 }}
-        >
-          <h2 className="text-5xl md:text-6xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4e99ff] to-[#0fffc3]">
-              Powerful Features
-            </span>
-          </h2>
-          <p className="text-lg text-white/40 font-light tracking-wide max-w-2xl mx-auto" style={{ fontFamily: 'var(--font-inter)' }}>
-            Cutting-edge technology meets intuitive design
-          </p>
-        </motion.div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              className="rounded-2xl p-8 relative overflow-hidden group border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm"
-              initial={{ opacity: 0, y: 50 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              whileHover={{ y: -8, borderColor: "rgba(78, 153, 255, 0.3)" }}
-            >
-              {/* Gradient Background on Hover */}
-              <motion.div
-                className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}
-              />
-
-              <div className="relative z-10">
-                <div className="text-4xl mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-bold mb-3 text-white tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
-                  {feature.title}
-                </h3>
-                <p className="text-white/40 text-sm leading-relaxed font-light tracking-wide" style={{ fontFamily: 'var(--font-inter)' }}>
-                  {feature.description}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -592,180 +432,6 @@ function DemoSection() {
               </motion.button>
             </div>
           </motion.div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-// Avatar Gallery
-function AvatarGallery() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, amount: 0.2 });
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-
-  const avatars = [
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
-    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
-    "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop",
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-  ];
-
-  return (
-    <section id="gallery" ref={ref} className="py-32 relative overflow-hidden bg-[#030303]">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#be65ff]/[0.03] via-transparent to-[#4e99ff]/[0.03] blur-3xl" />
-
-      <div className="container mx-auto px-6 relative z-10">
-        <motion.div
-          className="text-center mb-20"
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8 }}
-        >
-          <h2 className="text-5xl md:text-6xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4e99ff] to-[#be65ff]">
-              Avatars in Action
-            </span>
-          </h2>
-          <p className="text-lg text-white/40 font-light tracking-wide max-w-2xl mx-auto" style={{ fontFamily: 'var(--font-inter)' }}>
-            See our AI avatars come to life
-          </p>
-        </motion.div>
-
-        <div
-          className="flex gap-6 overflow-x-auto pb-8 scrollbar-hide"
-          onMouseMove={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-          }}
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
-          {avatars.map((avatar, index) => (
-            <motion.div
-              key={index}
-              className="shrink-0 w-72 h-72 rounded-2xl overflow-hidden group relative border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm"
-              initial={{ opacity: 0, x: 50 }}
-              animate={isInView ? { opacity: 1, x: 0 } : {}}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              whileHover={{ scale: 1.03, zIndex: 10, borderColor: "rgba(78, 153, 255, 0.3)" }}
-            >
-              <Image
-                src={avatar}
-                alt={`Avatar ${index + 1}`}
-                width={288}
-                height={288}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="absolute bottom-4 left-4 right-4">
-                  <h3 className="text-white font-bold text-lg mb-1 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
-                    Avatar {index + 1}
-                  </h3>
-                  <p className="text-white/40 text-xs font-light tracking-wide" style={{ fontFamily: 'var(--font-inter)' }}>
-                    Interactive AI Character
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// Testimonials Section
-function TestimonialsSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, amount: 0.2 });
-
-  const testimonials = [
-    {
-      name: "Sarah Chen",
-      role: "CEO, TechVenture",
-      content: "VideoAvatar transformed our customer service. The AI avatars are incredibly lifelike and engaging.",
-      logo: "🚀",
-    },
-    {
-      name: "Marcus Johnson",
-      role: "Creative Director, Digital Studio",
-      content: "The neural-powered technology creates avatars that feel truly alive. Our users love it!",
-      logo: "✨",
-    },
-    {
-      name: "Emily Rodriguez",
-      role: "Product Manager, InnovateLab",
-      content: "Seamless integration and powerful features. This is the future of digital interaction.",
-      logo: "💡",
-    },
-  ];
-
-  return (
-    <section id="testimonials" ref={ref} className="py-32 relative bg-[#030303]">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#4e99ff]/[0.02] via-transparent to-[#0fffc3]/[0.02] blur-3xl" />
-
-      <div className="container mx-auto px-6 relative z-10">
-        <motion.div
-          className="text-center mb-20"
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8 }}
-        >
-          <h2 className="text-5xl md:text-6xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#0fffc3] to-[#4e99ff]">
-              Trusted by Innovators
-            </span>
-          </h2>
-        </motion.div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          {testimonials.map((testimonial, index) => (
-            <motion.div
-              key={testimonial.name}
-              className="rounded-2xl p-8 relative border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm"
-              initial={{ opacity: 0, y: 50 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: index * 0.2 }}
-              whileHover={{ y: -8, borderColor: "rgba(15, 255, 195, 0.3)" }}
-            >
-              <div className="text-3xl mb-4">{testimonial.logo}</div>
-              <p className="text-white/40 font-light mb-6 leading-relaxed text-sm tracking-wide" style={{ fontFamily: 'var(--font-inter)' }}>
-                "{testimonial.content}"
-              </p>
-              <div>
-                <h4 className="text-white font-bold text-base mb-1 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
-                  {testimonial.name}
-                </h4>
-                <p className="text-[#4e99ff] text-xs font-light tracking-wide" style={{ fontFamily: 'var(--font-inter)' }}>
-                  {testimonial.role}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Brand Logos */}
-        <motion.div
-          className="mt-20 flex flex-wrap justify-center items-center gap-12 opacity-40"
-          initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 0.4 } : {}}
-          transition={{ duration: 0.8, delay: 0.6 }}
-        >
-          {["TechCorp", "InnovateLab", "DigitalStudio", "FutureTech", "NeuralAI"].map((brand, i) => (
-            <motion.div
-              key={brand}
-              className="text-xl text-white/30 font-medium tracking-wide"
-              style={{ fontFamily: 'var(--font-orbitron)' }}
-              whileHover={{ scale: 1.1, color: "#0fffc3" }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: 0.8 + i * 0.1 }}
-            >
-              {brand}
-            </motion.div>
-          ))}
         </motion.div>
       </div>
     </section>

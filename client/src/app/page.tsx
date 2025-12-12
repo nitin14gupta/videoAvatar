@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform, useInView, useAnimation } from "framer-motion";
 import CustomCursor from "@/src/component/CustomCursor";
-import { HeroGeometric } from "@/src/components/ui/shape-landing-hero";
-import TestimonialCard, { Testimonial } from "@/src/components/ui/multi-media-testimonials";
-import { FeatureSteps } from "@/src/components/ui/features-section";
+import { HeroGeometric } from "@/src/component/ui/shape-landing-hero";
+import TestimonialCard, { Testimonial } from "@/src/component/ui/multi-media-testimonials";
+import { FeatureSteps } from "@/src/component/ui/features-section";
 import CurvedLoop from "@/src/component/CurvedLoop";
 import InfiniteMenu from "@/src/component/InfiniteMenu";
 import Link from "next/link";
+import Navbar from "@/src/component/navbar";
 export default function Home() {
 
   const testimonials: Testimonial[] = [
@@ -235,7 +236,7 @@ export default function Home() {
       <CustomCursor />
 
       {/* Navigation */}
-      <NavBar />
+      <Navbar />
 
       {/* Hero Section */}
       <HeroGeometric
@@ -256,7 +257,6 @@ export default function Home() {
 
       {/* Demo/Upload Section */}
       <div className="relative flex min-h-screen w-full items-center justify-center overflow-clip">
-        <DemoSection />
         <CurvedLoop
           marqueeText="Be ✦ Creative ✦ With ✦ Video ✦ Avatar ✦"
           speed={3}
@@ -298,146 +298,6 @@ export default function Home() {
     </div>
   );
 }
-
-// Navigation Component
-function NavBar() {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  return (
-    <motion.nav
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      className={`fixed top-0 w-full z-40 transition-all duration-300 ${scrolled ? "bg-[#030303]/80 backdrop-blur-md" : "bg-transparent"
-        }`}
-    >
-      <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-        <motion.div
-          className="text-2xl font-bold"
-          style={{
-            fontFamily: 'var(--font-orbitron)',
-            background: 'linear-gradient(135deg, #4e99ff, #be65ff)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}
-          whileHover={{ scale: 1.05 }}
-        >
-          VideoAvatar
-        </motion.div>
-        <div className="hidden md:flex gap-8 items-center">
-          {["Features", "Demo", "Gallery", "Testimonials"].map((item) => (
-            <motion.a
-              key={item}
-              href={`#${item.toLowerCase()}`}
-              className="text-white/60 hover:text-[#0fffc3] transition-colors text-sm tracking-wide"
-              style={{ fontFamily: 'var(--font-inter)' }}
-              whileHover={{ scale: 1.1 }}
-            >
-              {item}
-            </motion.a>
-          ))}
-          <Link href="/Login">
-            <motion.button
-              className="px-6 py-2.5 bg-gradient-to-r from-[#4e99ff] to-[#be65ff] rounded-full text-white text-sm font-medium tracking-wide"
-              style={{ fontFamily: 'var(--font-inter)' }}
-              whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(78, 153, 255, 0.6)" }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Try Your Avatar
-            </motion.button>
-          </Link>
-        </div>
-      </div>
-    </motion.nav>
-  );
-}
-
-// Demo/Upload Section
-function DemoSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, amount: 0.2 });
-  const [isDragging, setIsDragging] = useState(false);
-
-  return (
-    <section id="demo" ref={ref} className="py-32 relative bg-[#030303]">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0fffc3]/[0.02] via-transparent to-[#4e99ff]/[0.02] blur-3xl" />
-
-      <div className="container mx-auto px-6 relative z-10">
-        <motion.div
-          className="text-center mb-20"
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8 }}
-        >
-          <h2 className="text-5xl md:text-6xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#0fffc3] to-[#4e99ff]">
-              Try It Now
-            </span>
-          </h2>
-          <p className="text-lg text-white/40 font-light tracking-wide max-w-2xl mx-auto" style={{ fontFamily: 'var(--font-inter)' }}>
-            Upload your content and watch the magic happen
-          </p>
-        </motion.div>
-
-        <motion.div
-          className="max-w-4xl mx-auto"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={isInView ? { opacity: 1, scale: 1 } : {}}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <motion.div
-            className={`rounded-3xl p-12 border border-dashed transition-all duration-300 bg-white/[0.02] backdrop-blur-sm ${isDragging
-              ? "border-[#0fffc3] bg-[#0fffc3]/5 scale-105"
-              : "border-white/[0.15] hover:border-[#4e99ff]/50"
-              }`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setIsDragging(false);
-            }}
-            whileHover={{ scale: 1.01 }}
-            animate={isDragging ? { scale: 1.03 } : {}}
-          >
-            <div className="text-center">
-              <motion.div
-                className="text-5xl mb-6"
-                animate={isDragging ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
-                transition={{ duration: 0.5, repeat: Infinity }}
-              >
-                📤
-              </motion.div>
-              <h3 className="text-2xl font-bold mb-4 text-white tracking-tight" style={{ fontFamily: 'var(--font-orbitron)' }}>
-                Drag & Drop Your Content
-              </h3>
-              <p className="text-white/40 text-sm mb-8 font-light tracking-wide" style={{ fontFamily: 'var(--font-inter)' }}>
-                Upload images, videos, or audio files to create your AI avatar
-              </p>
-              <motion.button
-                className="px-8 py-3.5 bg-gradient-to-r from-[#4e99ff] to-[#be65ff] rounded-full text-white text-sm font-medium tracking-wide"
-                style={{ fontFamily: 'var(--font-inter)' }}
-                whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(78, 153, 255, 0.6)" }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Choose Files
-              </motion.button>
-            </div>
-          </motion.div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
 // CTA Section
 function CTASection() {
   const ref = useRef<HTMLDivElement>(null);

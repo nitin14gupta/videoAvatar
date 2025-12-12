@@ -5,9 +5,7 @@ import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { apiService } from "@/src/api/apiService";
-import { API_CONFIG } from "@/src/api/config";
 import { Avatar } from "@/src/api/config";
-import CustomCursor from "@/src/component/CustomCursor";
 import { useToast } from "@/src/context/ToastContext";
 
 // TypeScript definitions for Web Speech API
@@ -541,7 +539,6 @@ export default function SessionPage() {
 
     return (
         <div className="min-h-screen bg-[#101621] relative overflow-hidden">
-            <CustomCursor />
 
             <div className="container mx-auto px-6 py-8 max-w-7xl h-screen flex flex-col">
                 {/* Header */}

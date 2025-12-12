@@ -5,9 +5,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/src/context/AuthContext";
 import { apiService } from "@/src/api/apiService";
 import { Avatar } from "@/src/api/config";
-import CustomCursor from "@/src/component/CustomCursor";
 import AvatarCard from "@/src/component/AvatarCard";
-import ConversationCard from "@/src/component/ConversationCard";
 import CreateAvatarModal from "@/src/component/CreateAvatarModal";
 
 export default function DashboardPage() {
@@ -49,7 +47,6 @@ export default function DashboardPage() {
 
     return (
         <div className="min-h-screen bg-[#101621] relative overflow-hidden">
-            <CustomCursor />
 
             {/* Top Bar */}
             <TopBar

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Orbitron, Inter } from "next/font/google";
+import CustomCursor from "@/src/component/CustomCursor";
 import { ToastProvider } from "@/src/context/ToastContext";
 import { AuthProvider } from "@/src/context/AuthContext";
 import "./globals.css";
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body
         className={`${orbitron.variable} ${inter.variable} antialiased`}
       >
+        <CustomCursor />
         <ToastProvider>
           <AuthProvider>
             {children}

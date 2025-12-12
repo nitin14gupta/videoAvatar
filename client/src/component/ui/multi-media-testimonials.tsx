@@ -6,18 +6,18 @@ import {
     CardContent,
     CardHeader,
     CardTitle,
-} from "@/src/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
-import { AspectRatio } from "@/src/components/ui/aspect-ratio";
-import { ScrollArea } from "@/src/components/ui/scroll-area";
-import { Separator } from "@/src/components/ui/seperator";
+} from "@/src/component/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/src/component/ui/avatar";
+import { AspectRatio } from "@/src/component/ui/aspect-ratio";
+import { ScrollArea } from "@/src/component/ui/scroll-area";
+import { Separator } from "@/src/component/ui/seperator";
 import {
     Dialog,
     DialogContent,
     DialogTrigger,
     DialogClose,
-} from "@/src/components/ui/dialog";
-import { Button } from "@/src/components/ui/button";
+} from "@/src/component/ui/dialog";
+import { Button } from "@/src/component/ui/button";
 import { Play, X } from "lucide-react";
 import Image from "next/image";
 

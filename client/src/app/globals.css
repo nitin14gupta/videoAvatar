@@ -3,8 +3,8 @@
 :root {
   /* Futuristic Dreamscape Color Palette */
   --bg-primary: #101621;
-  --accent-azure: #4e99ff;
-  --accent-violet: #be65ff;
+  --accent-azure: #d5d9de;
+  --accent-violet: #636264;
   --primary-mint: #0fffc3;
   --secondary-magenta: #ff9aff;
   --text-primary: #ffffff;
@@ -62,7 +62,7 @@ h6 {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 3px;
 }
 
 ::-webkit-scrollbar-track {
@@ -168,4 +168,8 @@ h6 {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+* {
+  cursor: none;
 }

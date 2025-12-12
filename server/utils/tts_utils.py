@@ -331,17 +331,103 @@ def get_tts_instance():
 
 
 def download_reference_audio(audio_url: str, output_path: str) -> bool:
-    """Download reference audio file from URL"""
+    """Download reference audio file from URL and convert to WAV if needed"""
     try:
         response = requests.get(audio_url, timeout=30)
-        if response.status_code == 200:
-            with open(output_path, 'wb') as f:
-                f.write(response.content)
-            logger.info(f"Downloaded reference audio: {audio_url}")
-            return True
-        else:
+        if response.status_code != 200:
             logger.error(f"Failed to download audio: {response.status_code}")
             return False
+        
+        # Determine file extension from URL or content type
+        url_lower = audio_url.lower()
+        if '.webm' in url_lower:
+            temp_ext = '.webm'
+        elif '.mp3' in url_lower:
+            temp_ext = '.mp3'
+        elif '.m4a' in url_lower or '.mp4' in url_lower:
+            temp_ext = '.m4a'
+        elif '.wav' in url_lower:
+            temp_ext = '.wav'
+        else:
+            # Try to detect from content type
+            content_type = response.headers.get('content-type', '').lower()
+            if 'webm' in content_type:
+                temp_ext = '.webm'
+            elif 'mp3' in content_type or 'mpeg' in content_type:
+                temp_ext = '.mp3'
+            elif 'wav' in content_type or 'wave' in content_type:
+                temp_ext = '.wav'
+            else:
+                temp_ext = '.webm'  # Default to webm
+        
+        # Save to temp file with original extension
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        temp_input = os.path.join(temp_dir, f"ref_audio_temp_{os.getpid()}{temp_ext}")
+        
+        with open(temp_input, 'wb') as f:
+            f.write(response.content)
+        
+        logger.info(f"Downloaded reference audio: {audio_url} (format: {temp_ext})")
+        
+        # If it's already WAV, just copy it
+        if temp_ext == '.wav':
+            import shutil
+            shutil.copy2(temp_input, output_path)
+            try:
+                os.remove(temp_input)
+            except:
+                pass
+            return True
+        
+        # Convert to WAV using ffmpeg
+        try:
+            import subprocess
+            cmd = [
+                'ffmpeg', '-y', '-i', temp_input,
+                '-ar', '24000',  # XTTS-v2 uses 24kHz
+                '-ac', '1',  # Mono
+                '-c:a', 'pcm_s16le',  # PCM 16-bit little-endian
+                output_path
+            ]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            # Cleanup temp file
+            try:
+                if os.path.exists(temp_input):
+                    os.remove(temp_input)
+            except:
+                pass
+            
+            if result.returncode == 0 and os.path.exists(output_path):
+                logger.info(f"Converted audio to WAV: {output_path}")
+                return True
+            else:
+                logger.error(f"FFmpeg conversion failed: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            logger.error("FFmpeg conversion timed out")
+            try:
+                if os.path.exists(temp_input):
+                    os.remove(temp_input)
+            except:
+                pass
+            return False
+        except Exception as e:
+            logger.error(f"Error converting audio with ffmpeg: {e}")
+            try:
+                if os.path.exists(temp_input):
+                    os.remove(temp_input)
+            except:
+                pass
+            return False
+            
     except Exception as e:
         logger.error(f"Error downloading reference audio: {e}")
         return False

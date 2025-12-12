@@ -35,10 +35,10 @@ export default function Navbar() {
 
     // Navigation Items
     const navItems = [
-        { name: "Components", href: "/get-started/components" },
-        { name: "Templates", href: "/get-started/templates" },
-        { name: "Docs", href: "/get-started/introduction" },
-        { name: "Pricing", href: "/get-started/pricing" },
+        { name: "Components", href: "/Login" },
+        { name: "Templates", href: "/Login" },
+        { name: "Docs", href: "/Login" },
+        { name: "Pricing", href: "/Login" },
     ];
 
     return (
@@ -109,7 +109,7 @@ export default function Navbar() {
 
                     {/* Get Started Button */}
                     <Link
-                        href="/get-started/components"
+                        href="/Login"
                         className="hidden sm:flex relative group overflow-hidden px-5 py-2.5 rounded-full bg-white text-zinc-950 font-bold text-xs transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)]"
                     >
                         <span className="relative z-10">Get Started</span>
@@ -168,7 +168,7 @@ export default function Navbar() {
                             <div className="h-px bg-white/5 my-2 mx-4" />
 
                             <Link
-                                href="/get-started/components"
+                                href="/Login"
                                 onClick={() => setIsMobileMenuOpen(false)}
                                 className="flex w-full items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white text-black font-bold active:scale-95 transition-transform"
                             >

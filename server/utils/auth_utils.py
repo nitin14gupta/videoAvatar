@@ -8,8 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-JWT_SECRET = os.getenv("JWT_SECRET_KEY", "change-me")
-# 100 days in seconds by default; can be overridden via env JWT_ACCESS_TOKEN_EXPIRES
+JWT_SECRET = os.getenv("JWT_SECRET_KEY")
 DEFAULT_EXP_SECONDS = 100 * 24 * 60 * 60
 JWT_EXPIRES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", str(DEFAULT_EXP_SECONDS)))
 

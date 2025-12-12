@@ -167,6 +167,7 @@ async def create_avatar(
             "created_by": user_id,
             "training_status": "pending",  # Set to pending for custom avatars
             "blinking_video_url": None,  # Will be set after processing
+            "thinking_sound_url": None,  # Will be set after processing
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": time.strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -229,6 +230,7 @@ async def update_avatar(
         # Build update data
         update_data = {"updated_at": time.strftime("%Y-%m-%d %H:%M:%S")}
         image_url_changed = False
+        audio_url_changed = False
         if request.name is not None:
             update_data["name"] = request.name.strip()
         if request.role_title is not None:
@@ -243,9 +245,19 @@ async def update_avatar(
             # If image changed, reset blinking video and trigger regeneration
             if image_url_changed:
                 update_data["blinking_video_url"] = None
+                update_data["thinking_sound_url"] = None  # Reset thinking sound when image changes
                 update_data["training_status"] = "pending"
         if request.audio_url is not None:
+            # Check if audio URL is actually changing
+            if check.data[0].get("audio_url") != request.audio_url:
+                audio_url_changed = True
             update_data["audio_url"] = request.audio_url
+            # If audio changed, reset thinking sound (it depends on audio for voice cloning)
+            if audio_url_changed:
+                update_data["thinking_sound_url"] = None
+                # If image exists, trigger regeneration to update thinking sound
+                if check.data[0].get("image_url"):
+                    update_data["training_status"] = "pending"
         if request.language is not None:
             update_data["language"] = request.language
         if request.specialty is not None:
@@ -267,8 +279,9 @@ async def update_avatar(
                 detail="Failed to update avatar"
             )
         
-        # If image URL changed, trigger background processing for blinking video regeneration
-        if image_url_changed and request.image_url:
+        # If image URL changed, trigger background processing for blinking video and thinking sound regeneration
+        # Also trigger if audio URL changed (to regenerate thinking sound with new voice)
+        if (image_url_changed and request.image_url) or (audio_url_changed and check.data[0].get("image_url")):
             asyncio.create_task(process_blinking_video_for_avatar(avatar_id))
         
         return {"avatar": res.data[0]}

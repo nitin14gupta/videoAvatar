@@ -5,6 +5,7 @@ import os
 import time
 import logging
 import asyncio
+import json
 from typing import Optional
 from io import BytesIO
 from utils.liveportrait_utils import generate_blinking_animation_from_urls
@@ -105,60 +106,87 @@ async def process_blinking_video_for_avatar(avatar_id: str) -> bool:
             except Exception as e:
                 logger.warning(f"Failed to cleanup temp video file: {e}")
             
-            # Generate thinking sound using TTS with avatar's voice
+            # Generate multiple thinking sound variations using TTS with avatar's voice
             thinking_sound_url = None
+            thinking_sound_urls = []
             avatar_audio_url = avatar.get("audio_url")
             avatar_language = avatar.get("language", "en")
             
             if avatar_audio_url:
                 try:
-                    logger.info(f"Generating thinking sound for avatar {avatar_id}...")
-                    # Create thinking sound text - natural "hmm" sounds
-                    thinking_text = "hmm... hmmm... hmm"
+                    logger.info(f"Generating thinking sound variations for avatar {avatar_id}...")
                     
-                    # Generate thinking sound to temp file
-                    thinking_sound_path = os.path.join(temp_dir, f"thinking_sound_{avatar_id}.wav")
+                    # Multiple thinking sound variations for natural variety
+                    thinking_texts = [
+                        "Hmm",
+                        "Hmm, hmm",
+                        "Uh, hmm",
+                        "Let me think",
+                        "Hmm, just a moment",
+                    ]
                     
-                    # Generate thinking sound using TTS with avatar's voice
-                    thinking_result_path = await asyncio.to_thread(
-                        text_to_speech_with_voice_cloning,
-                        text=thinking_text,
-                        reference_audio_url=avatar_audio_url,
-                        language=avatar_language,
-                        output_path=thinking_sound_path
-                    )
-                    
-                    if thinking_result_path and os.path.exists(thinking_result_path):
-                        logger.info(f"Thinking sound generated: {thinking_result_path}")
-                        
-                        # Upload thinking sound to R2
-                        with open(thinking_result_path, 'rb') as f:
-                            thinking_audio_bytes = BytesIO(f.read())
-                        
-                        thinking_upload_result = r2_client.upload_file(
-                            file_bytes=thinking_audio_bytes,
-                            file_name=f"thinking_sound_{avatar_id}.wav",
-                            folder="thinking_sounds"
-                        )
-                        
-                        thinking_sound_url = thinking_upload_result["url"]
-                        logger.info(f"Uploaded thinking sound to R2: {thinking_sound_url}")
-                        
-                        # Cleanup temp thinking sound file
+                    # Generate each variation
+                    for i, thinking_text in enumerate(thinking_texts):
                         try:
-                            if os.path.exists(thinking_result_path):
-                                os.remove(thinking_result_path)
+                            # Generate thinking sound to temp file
+                            thinking_sound_path = os.path.join(temp_dir, f"thinking_sound_{avatar_id}_{i}.wav")
+                            
+                            logger.info(f"Generating thinking sound variation {i+1}/{len(thinking_texts)}: '{thinking_text}'")
+                            
+                            # Generate thinking sound using TTS with avatar's voice
+                            thinking_result_path = await asyncio.to_thread(
+                                text_to_speech_with_voice_cloning,
+                                text=thinking_text,
+                                reference_audio_url=avatar_audio_url,
+                                language=avatar_language,
+                                output_path=thinking_sound_path
+                            )
+                            
+                            if thinking_result_path and os.path.exists(thinking_result_path):
+                                logger.info(f"Thinking sound variation {i+1} generated: {thinking_result_path}")
+                                
+                                # Upload thinking sound to R2
+                                with open(thinking_result_path, 'rb') as f:
+                                    thinking_audio_bytes = BytesIO(f.read())
+                                
+                                thinking_upload_result = r2_client.upload_file(
+                                    file_bytes=thinking_audio_bytes,
+                                    file_name=f"thinking_sound_{avatar_id}_{i}.wav",
+                                    folder="thinking_sounds"
+                                )
+                                
+                                variation_url = thinking_upload_result["url"]
+                                thinking_sound_urls.append(variation_url)
+                                logger.info(f"Uploaded thinking sound variation {i+1} to R2: {variation_url}")
+                                
+                                # Set first variation as backward-compatible thinking_sound_url
+                                if i == 0:
+                                    thinking_sound_url = variation_url
+                                
+                                # Cleanup temp thinking sound file
+                                try:
+                                    if os.path.exists(thinking_result_path):
+                                        os.remove(thinking_result_path)
+                                except Exception as e:
+                                    logger.warning(f"Failed to cleanup temp thinking sound file: {e}")
+                            else:
+                                logger.warning(f"Failed to generate thinking sound variation {i+1} for avatar {avatar_id}")
                         except Exception as e:
-                            logger.warning(f"Failed to cleanup temp thinking sound file: {e}")
+                            logger.error(f"Error generating thinking sound variation {i+1} for avatar {avatar_id}: {e}", exc_info=True)
+                            # Continue with other variations even if one fails
+                    
+                    if thinking_sound_urls:
+                        logger.info(f"Successfully generated {len(thinking_sound_urls)} thinking sound variations for avatar {avatar_id}")
                     else:
-                        logger.warning(f"Failed to generate thinking sound for avatar {avatar_id}")
+                        logger.warning(f"No thinking sound variations were generated for avatar {avatar_id}")
+                        
                 except Exception as e:
-                    logger.error(f"Error generating thinking sound for avatar {avatar_id}: {e}", exc_info=True)
+                    logger.error(f"Error generating thinking sounds for avatar {avatar_id}: {e}", exc_info=True)
                     # Don't fail the whole process if thinking sound generation fails
             else:
                 logger.warning(f"Avatar {avatar_id} has no audio URL, skipping thinking sound generation")
             
-            # Update avatar with blinking video URL, thinking sound URL, and set status to complete
+            # Update avatar with blinking video URL, thinking sound URLs, and set status to complete
             update_data = {
                 "blinking_video_url": blinking_video_url,
                 "training_status": "complete",
@@ -166,6 +194,9 @@ async def process_blinking_video_for_avatar(avatar_id: str) -> bool:
             }
             if thinking_sound_url:
                 update_data["thinking_sound_url"] = thinking_sound_url
+            if thinking_sound_urls:
+                # Store as JSON array for multiple variations
+                update_data["thinking_sound_urls"] = json.dumps(thinking_sound_urls)
             
             avatars.update(update_data).eq("id", avatar_id).execute()
             

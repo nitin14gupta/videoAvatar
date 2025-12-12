@@ -37,11 +37,14 @@ Test thinking sound generation using TTS with voice cloning.
 # Interactive mode
 python testFunction/test_thinking_sound.py
 
-# With command line arguments
+# With command line arguments (single variation)
 python testFunction/test_thinking_sound.py --audio-url "https://ccscontent.mafatlaleducation.dev/voices/9033b107-7fd1-4c78-97d7-39ddaaca93d4.webm" --upload
 
 # With custom thinking text
 python testFunction/test_thinking_sound.py --audio-url "https://ccscontent.mafatlaleducation.dev/voices/9033b107-7fd1-4c78-97d7-39ddaaca93d4.webm" --text "hmm… mm-hmm… ahh-hmm… mm…" --upload
+
+# Generate multiple variations (like production - 5 variations)
+python testFunction/test_thinking_sound.py --audio-url "https://ccscontent.mafatlaleducation.dev/voices/9033b107-7fd1-4c78-97d7-39ddaaca93d4.webm" --variations --upload
 
 # Upload to R2
 python testFunction/test_thinking_sound.py --audio-url "https://example.com/voice.webm" --upload
@@ -51,8 +54,11 @@ python testFunction/test_thinking_sound.py --audio-url "https://example.com/voic
 - `--audio-url`: URL to reference audio file for voice cloning
 - `--language`: Language code (default: "en")
 - `--output`: Output path for audio file
-- `--text`: Thinking sound text (default: "hmm... hmmm... hmm")
+- `--text`: Thinking sound text (ignored if `--variations` is used)
+- `--variations`: Generate multiple variations (5 variations: "Hmm", "Hmm, hmm", "Uh, hmm", "Let me think", "Hmm, just a moment")
 - `--upload`: Upload result to R2 storage
+
+**Note:** The `--variations` flag generates 5 different thinking sound variations using the same voice cloning, just like in production. This allows for natural variety when playing thinking sounds during conversations.
 
 ---
 

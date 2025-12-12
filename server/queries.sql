@@ -51,7 +51,8 @@ create table if not exists public.avatars (
   created_by text not null, -- 'system' for default avatars, user_id for user-created
   training_status text default 'complete', -- 'pending', 'complete', 'failed' (for custom avatars)
   blinking_video_url text, -- R2 URL to pre-generated blinking animation video
-  thinking_sound_url text, -- R2 URL to pre-generated thinking sound (hmm, hmmm sounds) for latency period
+  thinking_sound_url text, -- R2 URL to pre-generated thinking sound (backward compatibility - first variation)
+  thinking_sound_urls text, -- JSON array of R2 URLs to multiple thinking sound variations (3-4 variations for natural variety)
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

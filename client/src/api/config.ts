@@ -82,6 +82,7 @@ export interface Avatar {
     training_status?: 'pending' | 'complete' | 'failed';
     blinking_video_url?: string;
     thinking_sound_url?: string;
+    thinking_sound_urls?: string[];
     created_at: string;
     updated_at: string;
 }

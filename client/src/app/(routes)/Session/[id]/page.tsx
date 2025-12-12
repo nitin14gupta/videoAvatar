@@ -91,6 +91,8 @@ export default function SessionPage() {
     const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
     const audioQueueRef = useRef<Array<{ url: string; audio: HTMLAudioElement }>>([]);
     const isPlayingQueueRef = useRef(false);
+    const thinkingSoundRef = useRef<HTMLAudioElement | null>(null);
+    const thinkingSoundTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const avatarVideoRef = useRef<HTMLVideoElement>(null);
@@ -128,14 +130,14 @@ export default function SessionPage() {
                 // Fetch avatar details
                 const res = await apiService.getAvatarById(avatarId);
                 setAvatar(res.avatar);
-                
+
                 // Use stored blinking video URL if available, otherwise fallback to generating on-the-fly
                 if (res.avatar.blinking_video_url) {
                     setBlinkingAnimationUrl(res.avatar.blinking_video_url);
                 } else {
                     // Fallback: generate on-the-fly (for backward compatibility or if processing failed)
-                const animationUrl = apiService.getBlinkingAnimationUrl(avatarId);
-                setBlinkingAnimationUrl(animationUrl);
+                    const animationUrl = apiService.getBlinkingAnimationUrl(avatarId);
+                    setBlinkingAnimationUrl(animationUrl);
                 }
             } catch (error) {
                 console.error("Failed to initialize:", error);
@@ -226,6 +228,21 @@ export default function SessionPage() {
                 audioPlayerRef.current.pause();
                 audioPlayerRef.current.src = '';
                 audioPlayerRef.current = null;
+            }
+
+            // Cleanup thinking sound
+            if (thinkingSoundRef.current) {
+                try {
+                    thinkingSoundRef.current.pause();
+                    thinkingSoundRef.current.currentTime = 0;
+                    thinkingSoundRef.current = null;
+                } catch (e) {
+                    console.error("Error stopping thinking sound in cleanup:", e);
+                }
+            }
+            if (thinkingSoundTimeoutRef.current) {
+                clearTimeout(thinkingSoundTimeoutRef.current);
+                thinkingSoundTimeoutRef.current = null;
             }
         };
     }, []);
@@ -357,10 +374,88 @@ export default function SessionPage() {
         }
     };
 
+    const playThinkingSound = () => {
+        if (!avatar) return;
+
+        // Get thinking sound URLs - handle both array and JSON string
+        let thinkingSounds: string[] = [];
+
+        if (avatar.thinking_sound_urls) {
+            // If it's already an array, use it
+            if (Array.isArray(avatar.thinking_sound_urls)) {
+                thinkingSounds = avatar.thinking_sound_urls;
+            } else if (typeof avatar.thinking_sound_urls === 'string') {
+                // If it's a JSON string, parse it
+                try {
+                    thinkingSounds = JSON.parse(avatar.thinking_sound_urls);
+                } catch (e) {
+                    console.warn("Failed to parse thinking_sound_urls:", e);
+                }
+            }
+        }
+
+        // Fallback to single thinking_sound_url if no variations available
+        if (thinkingSounds.length === 0 && avatar.thinking_sound_url) {
+            thinkingSounds = [avatar.thinking_sound_url];
+        }
+
+        if (thinkingSounds.length === 0) {
+            console.log("No thinking sounds available for avatar");
+            return;
+        }
+
+        // Randomly select a thinking sound variation
+        const randomIndex = Math.floor(Math.random() * thinkingSounds.length);
+        const selectedSoundUrl = thinkingSounds[randomIndex];
+
+        try {
+            // Stop any existing thinking sound
+            stopThinkingSound();
+
+            // Create and play thinking sound
+            const audio = new Audio(selectedSoundUrl);
+            audio.loop = true; // Loop until stopped
+            audio.volume = 0.6; // Slightly lower volume than TTS
+
+            thinkingSoundRef.current = audio;
+
+            audio.play().catch((error) => {
+                console.error("Error playing thinking sound:", error);
+            });
+
+            console.log(`Playing thinking sound: ${selectedSoundUrl}`);
+        } catch (error) {
+            console.error("Error setting up thinking sound:", error);
+        }
+    };
+
+    const stopThinkingSound = () => {
+        if (thinkingSoundRef.current) {
+            try {
+                thinkingSoundRef.current.pause();
+                thinkingSoundRef.current.currentTime = 0;
+                thinkingSoundRef.current = null;
+            } catch (error) {
+                console.error("Error stopping thinking sound:", error);
+            }
+        }
+        // Clear timeout if exists
+        if (thinkingSoundTimeoutRef.current) {
+            clearTimeout(thinkingSoundTimeoutRef.current);
+            thinkingSoundTimeoutRef.current = null;
+        }
+    };
+
     const sendToLLM = async (text: string) => {
         if (!text.trim() || !avatar) return;
 
         setIsProcessing(true);
+
+        // Start thinking sound after 2 seconds of latency
+        thinkingSoundTimeoutRef.current = setTimeout(() => {
+            playThinkingSound();
+        }, 2000);
+
         try {
             // Add user message to UI
             const userMessage: Message = {
@@ -379,6 +474,9 @@ export default function SessionPage() {
                 };
                 return [...prev, initialAvatarMessage];
             });
+
+            // Track if first audio chunk has been received
+            let firstAudioChunkReceived = false;
 
             // Create streaming chat WebSocket
             const ws = apiService.createStreamingChat(
@@ -404,10 +502,18 @@ export default function SessionPage() {
                 },
                 // onAudioChunk - play audio chunk immediately
                 (chunkText: string, audioBase64: string) => {
+                    // Stop thinking sound when first TTS audio arrives
+                    if (!firstAudioChunkReceived) {
+                        stopThinkingSound();
+                        firstAudioChunkReceived = true;
+                    }
                     playTTSAudioChunk(audioBase64);
                 },
                 // onComplete - finalize response
                 (fullResponse: string, newConversationId: string) => {
+                    // Ensure thinking sound is stopped
+                    stopThinkingSound();
+
                     if (newConversationId) {
                         setConversationId(newConversationId);
                     }
@@ -417,6 +523,9 @@ export default function SessionPage() {
                 },
                 // onError
                 (error: string) => {
+                    // Stop thinking sound on error
+                    stopThinkingSound();
+
                     console.error("Streaming chat error:", error);
                     showError("Error", error);
                     setIsProcessing(false);
@@ -427,6 +536,9 @@ export default function SessionPage() {
             conversationWebSocketRef.current = ws;
 
         } catch (error: any) {
+            // Stop thinking sound on error
+            stopThinkingSound();
+
             console.error("Error starting streaming chat:", error);
             showError("Error", error?.message || "Failed to start conversation");
             setIsProcessing(false);
@@ -588,12 +700,12 @@ export default function SessionPage() {
                                     }}
                                 />
                             ) : (
-                            <Image
-                                src={avatar.image_url}
-                                alt={avatar.name}
-                                fill
-                                className="object-cover"
-                            />
+                                <Image
+                                    src={avatar.image_url}
+                                    alt={avatar.name}
+                                    fill
+                                    className="object-cover"
+                                />
                             )}
                         </div>
 

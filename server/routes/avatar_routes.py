@@ -167,7 +167,8 @@ async def create_avatar(
             "created_by": user_id,
             "training_status": "pending",  # Set to pending for custom avatars
             "blinking_video_url": None,  # Will be set after processing
-            "thinking_sound_url": None,  # Will be set after processing
+            "thinking_sound_url": None,
+            "thinking_sound_urls": None, 
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": time.strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -246,6 +247,7 @@ async def update_avatar(
             if image_url_changed:
                 update_data["blinking_video_url"] = None
                 update_data["thinking_sound_url"] = None  # Reset thinking sound when image changes
+                update_data["thinking_sound_urls"] = None  # Reset thinking sound variations
                 update_data["training_status"] = "pending"
         if request.audio_url is not None:
             # Check if audio URL is actually changing
@@ -255,6 +257,7 @@ async def update_avatar(
             # If audio changed, reset thinking sound (it depends on audio for voice cloning)
             if audio_url_changed:
                 update_data["thinking_sound_url"] = None
+                update_data["thinking_sound_urls"] = None  # Reset thinking sound variations
                 # If image exists, trigger regeneration to update thinking sound
                 if check.data[0].get("image_url"):
                     update_data["training_status"] = "pending"

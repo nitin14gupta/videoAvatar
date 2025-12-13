@@ -10,9 +10,7 @@ from typing import Optional
 from utils.auth_utils import decode_jwt
 from utils.llm_utils import get_llm
 from utils.tts_utils import text_to_speech_with_voice_cloning_bytes
-from utils.phrase_detector import extract_phrase
 from utils.streaming_tts import TTSQueue, generate_tts_async
-from utils.tts_text_cleaner import clean_and_validate_phrase
 from db.config import get_supabase_client
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -172,10 +170,13 @@ async def chat_with_avatar_stream(websocket: WebSocket):
         
         # Build LLM messages
         llm_messages = []
+        tts_instruction = "CRITICAL INSTRUCTION: Your response will be converted directly to speech. You MUST generate ONLY plain text with no formatting whatsoever. DO NOT use: markdown, asterisks, underscores, code blocks, URLs, special symbols, or any formatting. IMPORTANT: You MUST end each sentence with a full stop (period). Use full stops to separate sentences. Write exactly as you would speak - natural, conversational plain text with proper sentence endings using full stops."
+        
         if avatar.get("template_prompt"):
-            llm_messages.append(SystemMessage(content=avatar.get("template_prompt")))
+            system_prompt = f"{avatar.get('template_prompt')}\n\n{tts_instruction}"
+            llm_messages.append(SystemMessage(content=system_prompt))
         else:
-            default_prompt = f"You are {avatar.get('name')}, a {avatar.get('role_title')}. {avatar.get('description', '')}. Be conversational, friendly, and helpful."
+            default_prompt = f"You are {avatar.get('name')}, a {avatar.get('role_title')}. {avatar.get('description', '')}. Be conversational, friendly, and helpful.\n\n{tts_instruction}"
             llm_messages.append(SystemMessage(content=default_prompt))
         
         for msg in history:
@@ -246,7 +247,7 @@ async def chat_with_avatar_stream(websocket: WebSocket):
         if tts_queue:
             tts_sender_task = asyncio.create_task(send_tts_chunks())
         
-        # Stream LLM tokens with optimized phrase detection
+        # Stream LLM tokens and generate TTS chunks directly
         async for chunk in llm.astream(llm_messages):
             if chunk.content:
                 text_buffer += chunk.content
@@ -258,49 +259,55 @@ async def chat_with_avatar_stream(websocket: WebSocket):
                     "text": chunk.content
                 })
                 
-                # Extract phrases as they become available (smaller chunks: 3-5 words)
+                # Split text buffer by sentences (period followed by space or end of string)
+                # Generate TTS for complete sentences
                 while text_buffer.strip():
-                    phrase, remaining = extract_phrase(text_buffer, min_words=3, max_words=6)
-                    
-                    if phrase and len(phrase.strip()) > 0:
-                        # Clean and validate phrase for TTS
-                        cleaned_phrase = clean_and_validate_phrase(phrase.strip(), min_words=3)
-                        
-                        if cleaned_phrase:
-                            # Start TTS generation for this phrase immediately (non-blocking)
-                            if tts_queue and avatar.get("audio_url"):
-                                chunk_id = chunk_id_counter
-                                chunk_id_counter += 1
-                                await tts_queue.add_tts_task(
-                                    text=cleaned_phrase,
-                                    reference_audio_url=avatar.get("audio_url"),
-                                    language=avatar.get("language", "en"),
-                                    chunk_id=chunk_id
-                                )
-                                logger.debug(f"Started TTS for cleaned phrase: {cleaned_phrase[:50]}...")
+                    # Find sentence boundaries (period followed by space or end)
+                    period_idx = text_buffer.find('. ')
+                    if period_idx == -1:
+                        # Check if buffer ends with period
+                        if text_buffer.strip().endswith('.'):
+                            period_idx = len(text_buffer) - 1
                         else:
-                            logger.debug(f"Skipped TTS for non-TTS-worthy phrase: {phrase[:50]}...")
+                            # No complete sentence yet, wait for more tokens
+                            break
+                    
+                    # Extract sentence (including the period)
+                    sentence = text_buffer[:period_idx + 1].strip()
+                    remaining = text_buffer[period_idx + 1:].lstrip()
+                    
+                    if sentence and len(sentence) >= 3:
+                        # Start TTS generation for this sentence immediately (non-blocking)
+                        if tts_queue and avatar.get("audio_url"):
+                            chunk_id = chunk_id_counter
+                            chunk_id_counter += 1
+                            await tts_queue.add_tts_task(
+                                text=sentence,
+                                reference_audio_url=avatar.get("audio_url"),
+                                language=avatar.get("language", "en"),
+                                chunk_id=chunk_id
+                            )
+                            logger.debug(f"Started TTS for sentence: {sentence[:50]}...")
                         
                         # Update buffer
                         text_buffer = remaining
                     else:
-                        # Not enough text for a phrase yet, wait for more tokens
+                        # Sentence too short, wait for more tokens
                         break
         
         # Process any remaining text in buffer
         if text_buffer.strip():
             remaining_text = text_buffer.strip()
-            # Clean and validate remaining text for TTS
-            cleaned_remaining = clean_and_validate_phrase(remaining_text, min_words=2)
-            if cleaned_remaining and tts_queue and avatar.get("audio_url"):
+            # Only process if it's substantial enough
+            if len(remaining_text) >= 3 and tts_queue and avatar.get("audio_url"):
                 chunk_id = chunk_id_counter
                 await tts_queue.add_tts_task(
-                    text=cleaned_remaining,
+                    text=remaining_text,
                     reference_audio_url=avatar.get("audio_url"),
                     language=avatar.get("language", "en"),
                     chunk_id=chunk_id
                 )
-                logger.debug(f"Started TTS for remaining cleaned text: {cleaned_remaining[:50]}...")
+                logger.debug(f"Started TTS for remaining text: {remaining_text[:50]}...")
         
         # Wait for all TTS tasks to complete
         if tts_queue:
@@ -448,13 +455,15 @@ async def chat_with_avatar(
         
         # Build LLM messages with system prompt
         llm_messages = []
+        tts_instruction = "CRITICAL INSTRUCTION: Your response will be converted directly to speech. You MUST generate ONLY plain text with no formatting whatsoever. DO NOT use: markdown, asterisks, underscores, code blocks, URLs, special symbols, or any formatting. IMPORTANT: You MUST end each sentence with a full stop (period). Use full stops to separate sentences. Write exactly as you would speak - natural, conversational plain text with proper sentence endings using full stops."
         
         # Add system prompt from avatar
         if avatar.get("template_prompt"):
-            llm_messages.append(SystemMessage(content=avatar.get("template_prompt")))
+            system_prompt = f"{avatar.get('template_prompt')}\n\n{tts_instruction}"
+            llm_messages.append(SystemMessage(content=system_prompt))
         else:
             # Default system prompt
-            default_prompt = f"You are {avatar.get('name')}, a {avatar.get('role_title')}. {avatar.get('description', '')}. Be conversational, friendly, and helpful."
+            default_prompt = f"You are {avatar.get('name')}, a {avatar.get('role_title')}. {avatar.get('description', '')}. Be conversational, friendly, and helpful.\n\n{tts_instruction}"
             llm_messages.append(SystemMessage(content=default_prompt))
         
         # Add conversation history

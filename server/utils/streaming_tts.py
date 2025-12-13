@@ -6,13 +6,9 @@ import asyncio
 import logging
 from typing import Optional, AsyncGenerator
 from utils.tts_utils import text_to_speech_with_voice_cloning_bytes
-from utils.tts_text_cleaner import clean_text_for_tts, is_tts_worthy
 
 logger = logging.getLogger(__name__)
 
-# Global semaphore to limit concurrent TTS operations
-# XTTS-v2 doesn't handle many parallel CUDA operations well
-# Limit to 1 concurrent TTS operation to prevent CUDA errors
 TTS_SEMAPHORE = asyncio.Semaphore(1)
 
 
@@ -26,24 +22,23 @@ async def generate_tts_async(
     Uses semaphore to prevent concurrent CUDA operations
     
     Args:
-        text: Text to convert to speech
+        text: Text to convert to speech (should already be plain text from LLM)
         reference_audio_url: URL to reference audio
         language: Language code
         
     Returns:
         Audio bytes or None
     """
-    # Clean and validate text for TTS
+    # Basic validation
     if not text or not text.strip():
         logger.warning(f"Empty text provided for TTS")
         return None
     
-    # Clean the text (remove markdown, code blocks, etc.)
-    cleaned_text = clean_text_for_tts(text)
+    # Use text directly (LLM is instructed to output plain text only)
+    text_to_use = text.strip()
     
-    # Validate text is TTS-worthy
-    if not is_tts_worthy(cleaned_text, min_length=3):
-        logger.warning(f"Text not TTS-worthy after cleaning: {text[:50]}... -> {cleaned_text[:50]}...")
+    if len(text_to_use) < 3:
+        logger.warning(f"Text too short for TTS: {text_to_use[:50]}...")
         return None
     
     try:
@@ -51,10 +46,10 @@ async def generate_tts_async(
         # This prevents CUDA concurrency issues with XTTS-v2
         async with TTS_SEMAPHORE:
             # Run TTS in thread pool to avoid blocking
-            # Use cleaned_text instead of original text
+            # Use text directly from LLM
             audio_bytes = await asyncio.to_thread(
                 text_to_speech_with_voice_cloning_bytes,
-                cleaned_text,
+                text_to_use,
                 reference_audio_url,
                 language
             )
@@ -121,12 +116,13 @@ class TTSQueue:
     ):
         """Generate TTS and put result in queue"""
         try:
-            # Validate text before processing
+            # Basic validation - text should already be plain text from LLM
             if not text or len(text.strip()) < 3:
                 logger.warning(f"Skipping invalid TTS text (chunk {chunk_id}): too short")
                 return None
             
-            audio_bytes = await generate_tts_async(text, reference_audio_url, language)
+            # Use text directly (LLM is instructed to output plain text only)
+            audio_bytes = await generate_tts_async(text.strip(), reference_audio_url, language)
             if audio_bytes:
                 chunk_data = {
                     "chunk_id": chunk_id,
